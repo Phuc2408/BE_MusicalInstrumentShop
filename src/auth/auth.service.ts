@@ -1,0 +1,121 @@
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { UsersService } from 'src/users/users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { User } from 'src/users/entities/user.entity';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class AuthService {
+    constructor(
+        private usersService: UsersService,
+        private jwtService: JwtService,
+        private configService: ConfigService, 
+    ) {}
+
+    async validateUser(email: string, password: string): Promise<any> {
+        const user = await this.usersService.findOneByEmail(email); 
+        
+        if (!user) {
+            return null;
+        }
+        
+        if (!user.passwordHash) {
+            return { message: 'User is created with another method.' }; 
+        }
+        
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        
+        if (!isMatch) {
+            return null; 
+        }
+        
+        const { passwordHash, ...result } = user;
+        
+        return result; 
+    }
+
+    async register(createUserDto: CreateUserDto) {
+        if (await this.usersService.isEmailTaken(createUserDto.email)) {
+            throw new ConflictException('Email is exist');
+        }
+        
+        const salt = await bcrypt.genSalt();
+        const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+        
+        const userToSave = {
+            ...createUserDto,
+            passwordHash: hashedPassword,
+            loginMethod: 'local' as const, 
+            role: 'customer' as const,
+        };
+
+        const newUser = await this.usersService.create(userToSave);
+        const { passwordHash, ...result } = newUser;
+        return result;
+    }
+
+    async handleSocialLogin(provider: 'google', profile: any): Promise<User> {
+        const providerId = profile.id;
+        const email = profile.emails[0].value;
+        const fullName = profile.displayName;
+        
+        let user = await this.usersService.findOneBySocialId(provider, providerId); 
+        if (user) return user; 
+
+        const existingUser = await this.usersService.findOneByEmail(email);
+        if (existingUser) {
+            return this.usersService.updateSocialId(existingUser.user_id, provider, providerId); 
+        }
+        
+        const newUser = await this.usersService.createUserWithProvider(fullName, email, providerId, provider);
+        return newUser;
+    }
+
+    async login(user: User) {
+        const JWT_SECRET = this.configService.get('JWT_SECRET')!;
+        const REFRESH_EXPIRES = this.configService.get('JWT_REFRESH_EXPIRES') || '7d';
+
+        const payload = { email: user.email, sub: user.user_id, role: user.role };
+
+        const accessToken = this.jwtService.sign(payload); 
+
+        const refreshToken = this.jwtService.sign(payload, {
+            secret: JWT_SECRET, 
+            expiresIn: REFRESH_EXPIRES,
+        });
+        
+        const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
+        await this.usersService.updateRefreshTokenHash(user.user_id, refreshTokenHash);
+        
+        return {
+            user: {
+                id: user.user_id,
+                email: user.email,
+                role: user.role,
+                full_name: user.full_name,
+            },
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        };
+    }
+
+    async refreshTokens(userId: number, currentRefreshToken: string): Promise<any>{
+        const user = await this.usersService.findOneById(userId);
+        if (!user || !user.refreshTokenHash) {
+            throw new UnauthorizedException('Access Denied: Refresh token not found.');
+        }
+        const isMatch = await bcrypt.compare(currentRefreshToken, user.refreshTokenHash);
+        if (!isMatch) {
+
+        await this.usersService.updateRefreshTokenHash(userId, null);
+        throw new UnauthorizedException('Access Denied: Invalid refresh token.');
+        }
+        return this.login(user);
+    }
+
+    async logout(userId: number): Promise<void> {
+        await this.usersService.updateRefreshTokenHash(userId, null);
+    }
+}
