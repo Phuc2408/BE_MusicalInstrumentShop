@@ -5,6 +5,10 @@ import { UsersService } from 'src/users/users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from 'src/users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {ResetPasswordDto} from './dto/reset-password.dto'
 
 @Injectable()
 export class AuthService {
@@ -12,6 +16,9 @@ export class AuthService {
         private usersService: UsersService,
         private jwtService: JwtService,
         private configService: ConfigService, 
+
+        @InjectRepository(PasswordResetToken)
+        private readonly tokenRepository: Repository<PasswordResetToken>,
     ) {}
 
     async validateUser(email: string, password: string): Promise<any> {
@@ -113,6 +120,10 @@ export class AuthService {
         throw new UnauthorizedException('Access Denied: Invalid refresh token.');
         }
         return this.login(user);
+    }
+
+    async refreshPassword(tokenString: string, newPassword: string): Promise<void>{
+        const token = 
     }
 
     async logout(userId: number): Promise<void> {

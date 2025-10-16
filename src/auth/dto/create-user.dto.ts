@@ -1,29 +1,36 @@
 import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsDateString } from 'class-validator';
-
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto { 
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
+    
+    @ApiProperty({ example: 'john.doe@example.com' })
+    @IsEmail()
+    @IsNotEmpty()
+    email: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(6) 
-  password: string;
+    @ApiProperty({ example: 'SecureP@ss123' })
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(6) 
+    password: string;
 
-  @IsString()
-  @IsNotEmpty()
-  full_name: string;
-  
-  @IsOptional()
-  @IsString()
-  phone?: string; 
-  
+    @ApiProperty({ example: 'John Doe' })
+    @IsString()
+    @IsNotEmpty()
+    full_name: string;
+    
+    @ApiProperty({ example: '1234567890', required: false })
     @IsOptional()
-  @IsString()
-  address?: string; 
+    @IsString()
+    phone?: string; 
+    
+    @ApiProperty({ example: '123 Main St, Anytown, USA', required: false })
+    @IsOptional()
+    @IsString()
+    address?: string; 
 
-  @IsOptional()
-  @IsDateString()
-  dob?: string;
+    @ApiProperty({ example: '1990-01-01', required: false, format: 'date' })
+    @IsOptional()
+    @IsDateString()
+    dob?: string;
 }
