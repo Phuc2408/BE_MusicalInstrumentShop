@@ -8,7 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {ResetPasswordDto} from './dto/reset-password.dto'
+import { MailerService } from '../mailer/mailer.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +16,7 @@ export class AuthService {
         private usersService: UsersService,
         private jwtService: JwtService,
         private configService: ConfigService, 
+        private mailService: MailerService,
 
         @InjectRepository(PasswordResetToken)
         private readonly tokenRepository: Repository<PasswordResetToken>,
@@ -122,11 +123,62 @@ export class AuthService {
         return this.login(user);
     }
 
-    async refreshPassword(tokenString: string, newPassword: string): Promise<void>{
-        const token = 
+    async resetPassword(tokenString: string, newPassword: string): Promise<void>{
+        const token = await this.tokenRepository.findOne({
+            where: { token: tokenString },
+            relations: ['user']
+        })
+        if (!token) {
+            throw new UnauthorizedException('Invalid or missing reset token.');
+        }
+        if (token.expiresAt < new Date()) {
+            await this.tokenRepository.remove(token); 
+            throw new UnauthorizedException('Reset token has expired.');
+        }
+        const user = token.user;
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        await this.usersService.updatePassword(user.user_id, hashedPassword);
+        await this.tokenRepository.remove(token);
     }
 
     async logout(userId: number): Promise<void> {
         await this.usersService.updateRefreshTokenHash(userId, null);
+    }
+
+    async sendResetPasswordLink(email: string): Promise<void>{
+        const user = await this.usersService.findOneByEmail(email)
+        if (!user) {
+            console.log(`Password reset requested for non-existent email: ${email}`);
+            return;
+        }
+            const payload = {
+                sub: user.user_id,
+                email: user.email 
+        }
+        const tokenString = this.jwtService.sign(payload, { 
+        secret: this.configService.get('JWT_SECRET'), 
+        expiresIn: '1h', 
+        });
+        const expires = new Date();
+        expires.setHours(expires.getHours() + 1);
+        const newToken = this.tokenRepository.create({
+        token: tokenString,
+        userId: user.user_id,
+        expiresAt: expires,
+    });
+    await this.tokenRepository.save(newToken);
+        try {
+            const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+            const resetLink = `${frontendUrl}/reset-password?token=${tokenString}`;
+            await this.mailService.sendPasswordResetEmail(
+                user.email,
+                user.full_name || 'User', 
+                resetLink,
+            )
+        }
+        catch (err) {
+            console.error(`Failed to send reset email to ${user.email}:`, err);
+        }
     }
 }

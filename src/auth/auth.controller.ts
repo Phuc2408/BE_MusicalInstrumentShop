@@ -83,8 +83,8 @@ export class AuthController {
     @Post('reset-password')
     async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
         await this.authService.resetPassword(
-      resetPasswordDto.token, 
-      resetPasswordDto.newPassword
+        resetPasswordDto.token, 
+        resetPasswordDto.newPassword
         );
         return {
             message: 'Successfully changing password, please log in',
@@ -92,13 +92,26 @@ export class AuthController {
     }
     
     @HttpCode(HttpStatus.OK)
-    @Post('forget-password')
+    @Post('forgot-password')
     async forgetPassword(@Body() forgetPasswordDto: ForgetPasswordDto) {
-        await this.authService.forgetPassword(
-            forgetPasswordDto.email,
-        );
-        return {
-            message:'If an account with that email exists, a password reset link has been sent.'
-        }
+        await this.authService.sendResetPasswordLink( 
+        forgetPasswordDto.email,
+    );
+    return {
+        message:'If an account with that email exists, a password reset link has been sent.'
     }
+    }
+
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(AuthGuard('jwt')) 
+    @Post('logout')
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Invalidates the Refresh Token for the logged-in user' })
+    @ApiResponse({ status: 200, description: 'Logout successful.' })
+    async logout(@Request() req: { user: User }) {
+        await this.authService.logout(req.user.user_id); 
+        return {
+            message: 'Logout successful. Token invalidated.'
+        };
+    }   
 }

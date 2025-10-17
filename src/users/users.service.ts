@@ -22,6 +22,11 @@ export class UsersService {
       select: ['user_id', 'email', 'passwordHash', 'role', 'loginMethod'], 
     });
   }
+  // await this.usersService.updatePassword(user.user_id, hashedPassword);
+
+  async updatePassword(user_id: number, hashedPassword: string): Promise<void > {
+    await this.usersRepository.update(user_id, { passwordHash: hashedPassword })
+  }
 
   async findOneById(user_id: number): Promise<User | null> {
     return this.usersRepository.findOne({
