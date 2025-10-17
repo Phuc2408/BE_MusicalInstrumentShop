@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from './users/entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from './mailer/mailer.module';
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
 
 @Module({
   imports: [UsersModule,
@@ -22,7 +23,7 @@ import { MailerModule } from './mailer/mailer.module';
         url: configService.get<string>('POSTGRES_URL'), 
         
         entities: [
-          User, 
+          User, PasswordResetToken
         ],
         
         synchronize: process.env.NODE_ENV !== 'production', 

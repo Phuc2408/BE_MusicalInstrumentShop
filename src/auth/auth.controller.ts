@@ -35,6 +35,7 @@ export class AuthController {
 
     @HttpCode(HttpStatus.OK)
     @UseGuards(AuthGuard('local')) 
+    @Post('login/local')
     @ApiOperation({ summary: 'Authenticate user with username/password (Local Strategy)' })
     @ApiBody({ type: LoginUserDto }) 
     @ApiResponse({ 

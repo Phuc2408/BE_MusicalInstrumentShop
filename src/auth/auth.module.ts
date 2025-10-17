@@ -5,21 +5,26 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { LocalStrategy } from './strategies/local.strategy';
 import { GoogleTokenStrategy } from './strategies/google-token.strategy';
+import { MailerModule } from 'src/mailer/mailer.module'
+import { PasswordResetToken } from './entities/password-reset-token.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersModule } from 'src/users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RtStrategy } from './strategies/rt.strategy';
-import { UsersModule } from 'src/users/users.module';
+
 
 @Module({
   imports: [
-    UsersModule,
+    TypeOrmModule.forFeature([PasswordResetToken]),
+    MailerModule,
+    UsersModule, 
     JwtModule.registerAsync({
       imports: [ConfigModule], 
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'), 
-        signOptions: { expiresIn: configService.get('JWT_ACCESS_EXPIRES') },
-      }),
-    }),
+      })
+    })
   ],
   controllers: [AuthController],
   providers: [AuthService,

@@ -84,6 +84,7 @@ export class AuthService {
     async login(user: User) {
         const JWT_SECRET = this.configService.get('JWT_SECRET')!;
         const REFRESH_EXPIRES = this.configService.get('JWT_REFRESH_EXPIRES') || '7d';
+        console.log(REFRESH_EXPIRES)
 
         const payload = { email: user.email, sub: user.user_id, role: user.role };
 
@@ -158,7 +159,7 @@ export class AuthService {
         }
         const tokenString = this.jwtService.sign(payload, { 
         secret: this.configService.get('JWT_SECRET'), 
-        expiresIn: '1h', 
+        expiresIn: '7d', 
         });
         const expires = new Date();
         expires.setHours(expires.getHours() + 1);
