@@ -8,6 +8,10 @@ import { User } from './users/entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from './mailer/mailer.module';
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
+import { ProductModule } from './product/product.module';
+import { CategoryModule } from './category/category.module';
+import { BrandModule } from './brand/brand.module';
+import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [UsersModule,
@@ -34,6 +38,9 @@ import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
       }),
     }),
     MailerModule,
+    ProductModule,
+    BrandModule,
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

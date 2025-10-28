@@ -159,7 +159,7 @@ export class AuthService {
         }
         const tokenString = this.jwtService.sign(payload, { 
         secret: this.configService.get('JWT_SECRET'), 
-        expiresIn: '7d', 
+        expiresIn: '1h', 
         });
         const expires = new Date();
         expires.setHours(expires.getHours() + 1);
