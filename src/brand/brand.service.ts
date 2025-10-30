@@ -10,11 +10,10 @@ export class BrandService{
         private readonly brandRepository: Repository<Brand>,
     ) {}
 
-    async findByName(name: string): Promise<number[]>{
+    async findByName(name: string): Promise<Brand[]>{
         const brands = await this.brandRepository.createQueryBuilder('brand')
-            .select('brand.id')
             .where('brand.name ILIKE :searchName', { searchName: `%${name}%` })
             .getMany()
-        return brands.map(brand => brand.id);
+        return brands;
     }
 }

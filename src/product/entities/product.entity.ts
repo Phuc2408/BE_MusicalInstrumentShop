@@ -25,6 +25,9 @@ export class Product {
     @Column({ type: 'varchar', length: 255, unique: true })
     slug: string;
 
+    @Column({ type: 'varchar', length: 50, nullable: true })
+    price_display: string;
+
     @Column({ type: 'text', nullable: true })
     description: string;
 

@@ -11,7 +11,10 @@ import { PasswordResetToken } from './auth/entities/password-reset-token.entity'
 import { ProductModule } from './product/product.module';
 import { CategoryModule } from './category/category.module';
 import { BrandModule } from './brand/brand.module';
-import { ProductModule } from './product/product.module';
+import { Brand } from './brand/entities/brand.entity';
+import { Category } from './category/entities/category.entity';
+import { Product } from './product/entities/product.entity';
+import { ProductImage } from './product/entities/product-image.entity';
 
 @Module({
   imports: [UsersModule,
@@ -27,7 +30,7 @@ import { ProductModule } from './product/product.module';
         url: configService.get<string>('POSTGRES_URL'), 
         
         entities: [
-          User, PasswordResetToken
+          User, PasswordResetToken, Brand, Category, Product, ProductImage
         ],
         
         synchronize: process.env.NODE_ENV !== 'production', 
