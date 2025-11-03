@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column,  CreateDateColumn, UpdateDateColumn, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column,  CreateDateColumn, JoinColumn, ManyToOne } from 'typeorm';
 import { Product } from './product.entity';
 
 @Entity('product_images')

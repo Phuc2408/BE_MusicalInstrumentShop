@@ -44,7 +44,7 @@ export class AuthService {
         return result; 
     }
 
-    async register(createUserDto: CreateUserDto) {
+    async register(createUserDto: CreateUserDto, role: string = 'customer') {
         if (await this.usersService.isEmailTaken(createUserDto.email)) {
             throw new ConflictException('Email is exist');
         }
@@ -56,7 +56,7 @@ export class AuthService {
             ...createUserDto,
             passwordHash: hashedPassword,
             loginMethod: 'local' as const, 
-            role: 'customer' as const,
+            role: role,
         };
 
         const newUser = await this.usersService.create(userToSave);
@@ -81,9 +81,11 @@ export class AuthService {
         return newUser;
     }
 
-    async login(user: User) {
+    async login(user: User, rememberMe: boolean = false) {
         const JWT_SECRET = this.configService.get('JWT_SECRET')!;
-        const REFRESH_EXPIRES = this.configService.get('JWT_REFRESH_EXPIRES') || '7d';
+        const REFRESH_EXPIRES = rememberMe 
+        ? this.configService.get('JWT_REFRESH_LONG_EXPIRES') || '7d' 
+        : this.configService.get('JWT_REFRESH_SHORT_EXPIRES') || '1d';
         console.log(REFRESH_EXPIRES)
 
         const payload = { email: user.email, sub: user.user_id, role: user.role };

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, HttpCode, HttpStatus, Version  } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto'; 
@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger'; 
 
 @ApiTags('Authentication') 
-@Controller('auth')
+@Controller('v1/auth')
 export class AuthController {
     constructor(private authService: AuthService) { }
 
@@ -45,7 +45,7 @@ export class AuthController {
     })
     @ApiResponse({ status: 401, description: 'Unauthorized / Invalid credentials' })
     async loginLocal(@Request() req: { user: User }, @Body() loginDto: LoginUserDto) {
-        return this.authService.login(req.user); 
+        return this.authService.login(req.user, loginDto.rememberMe); 
     }
 
     @HttpCode(HttpStatus.OK)
@@ -82,14 +82,13 @@ export class AuthController {
 
     @HttpCode(HttpStatus.OK)
     @Post('reset-password')
+    @ApiResponse({ status: 200, description: 'Successfully changing password, please log in' })
     async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
         await this.authService.resetPassword(
         resetPasswordDto.token, 
         resetPasswordDto.newPassword
         );
-        return {
-            message: 'Successfully changing password, please log in',
-        }
+        return 'Successfully changing password, please log in'
     }
     
     @HttpCode(HttpStatus.OK)
@@ -98,9 +97,7 @@ export class AuthController {
         await this.authService.sendResetPasswordLink( 
         forgetPasswordDto.email,
     );
-    return {
-        message:'If an account with that email exists, a password reset link has been sent.'
-    }
+    return 'If an account with that email exists, a password reset link has been sent.';
     }
 
     @HttpCode(HttpStatus.OK)
@@ -111,8 +108,6 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'Logout successful.' })
     async logout(@Request() req: { user: User }) {
         await this.authService.logout(req.user.user_id); 
-        return {
-            message: 'Logout successful. Token invalidated.'
-        };
+        return 'Logout successful. Token invalidated.';
     }   
 }

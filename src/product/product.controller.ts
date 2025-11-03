@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
-@Controller('product')
+@Controller('v1/product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
@@ -14,7 +14,29 @@ export class ProductController {
     }
     return this.productService.unifiedSearch(query);
   }
+  @Get('brand/:slug')
+    async getProductsByBrandSlug(
+      @Param('slug') slug: string, 
+      @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+      @Query('limit', new DefaultValuePipe(64), ParseIntPipe) limit: number,
+  ) {
+      return this.productService.filterAndPaginateBySlug(slug, 'brand', page, limit); 
+  }
 
+  @Get('category/:slug')
+  async getProductsByCategorySlug(
+      @Param('slug') slug: string, 
+      @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+      @Query('limit', new DefaultValuePipe(64), ParseIntPipe) limit: number,
+  ) {
+      return this.productService.filterAndPaginateBySlug(slug, 'category', page, limit);
+  }
+
+  @Get(':slug')
+  async getProductByProductSlug(@Param('slug') slug: string) {
+    return this.productService.findProductDetailBySlug(slug)
+  }
+  
   @Post()
   create(@Body() createProductDto: CreateProductDto) {
     return this.productService.create(createProductDto);

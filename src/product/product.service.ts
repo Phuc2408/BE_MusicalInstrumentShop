@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { BrandService } from 'src/brand/brand.service';
@@ -6,6 +6,17 @@ import { CategoryService } from 'src/category/category.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { Repository } from 'typeorm';
+
+export interface PaginationResult {
+    data: Product[];
+    total: number;
+    currentPage: number;
+    limit: number;
+    totalPages: number;
+    entityName: string;
+    entitySlug: string;
+    entityType: 'brand' | 'category';
+}
 
 @Injectable()
 export class ProductService {
@@ -23,7 +34,7 @@ export class ProductService {
     const brandIds = brands.map(brand => brand.id)
     const categoryIds = categories.map(category => category.id)
     
-    const products = await this.searchProduct(query, brandIds, categoryIds)
+    const products = await this.getProductBySearch(query, brandIds, categoryIds)
 
     const collections = [
       ...brands.map(brand => ({ ...brand, type: 'brand' })),
@@ -33,7 +44,7 @@ export class ProductService {
     return {collections, products}
   }
 
-  private async searchProduct(query: string, brandIds: number[], categoryIds: number[]): Promise<any>{
+  private async getProductBySearch(query: string, brandIds: number[], categoryIds: number[]): Promise<any>{
     const searchName = `%${query}%`
     const qb = this.productRepository.createQueryBuilder('p')
 
@@ -46,9 +57,83 @@ export class ProductService {
     if (categoryIds.length > 0) {
       qb.orWhere('p.category_id IN (:...categoryIds)', {categoryIds})
     }
-
     return qb.limit(10).getMany();
   }
+
+  async filterAndPaginateBySlug(
+        slug: string, 
+        type: 'brand' | 'category', 
+        page: number, 
+        limit: number
+    ): Promise<PaginationResult> {
+        
+        let brandId: number | null = null;
+        let categoryId: number | null = null;
+        let entityName: string = '';
+        const finalLimit = limit > 0 ? limit : 64;
+
+        if (type === 'brand') {
+            const brand = await this.brandService.findBySlug(slug); 
+            brandId = brand.id;
+            entityName = brand.name;
+        } else { 
+            const category = await this.categoryService.findBySlug(slug);
+            categoryId = category.id;
+            entityName = category.name;
+        }
+        
+        return this.queryProductsCore(brandId, categoryId, entityName, slug, page, finalLimit);
+    }
+
+  private async queryProductsCore(
+        brandId: number | null, 
+        categoryId: number | null, 
+        entityName: string, 
+        entitySlug: string, 
+        page: number, 
+        limit: number
+    ): Promise<PaginationResult> {
+        
+        const skip = (page - 1) * limit;
+
+        const qb = this.productRepository.createQueryBuilder('product')
+            .leftJoinAndSelect('product.brand', 'brand') 
+            .leftJoinAndSelect('product.images', 'image')
+            .skip(skip)
+            .take(limit);
+
+        if (categoryId) {
+            qb.where('product.category_id = :categoryId', { categoryId });
+        } else if (brandId) {
+            qb.where('product.brand_id = :brandId', { brandId });
+        }
+        
+        const [products, total] = await qb.getManyAndCount();
+        const totalPages = Math.ceil(total / limit);
+        const type = categoryId ? 'category' : 'brand'; 
+
+        return {
+            data: products,
+            total: total, 
+            currentPage: page,
+            limit: limit,
+            totalPages: totalPages,
+            entityName: entityName,
+            entitySlug: entitySlug,
+            entityType: type,
+        };
+    }
+  async findProductDetailBySlug(slug: string) {
+    const productDetail = await this.productRepository.findOneBy({
+      slug: slug,
+    })
+    
+    if (!productDetail) {
+      throw new NotFoundException(`Product with slug "${slug}" not found.`);
+    }
+    return productDetail;
+  }
+
 
   create(createProductDto: CreateProductDto) {
     return 'This action adds a new product';

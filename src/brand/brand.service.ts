@@ -10,6 +10,18 @@ export class BrandService{
         private readonly brandRepository: Repository<Brand>,
     ) {}
 
+    async findBySlug(slug: string): Promise<Brand>{
+            const brand = await this.brandRepository.findOneBy({
+                slug: slug,
+            })
+    
+            if (!brand) {
+                throw new NotFoundException(`Brand with slug "${slug}" not found.`);
+            }
+            
+            return brand;
+        }
+
     async findByName(name: string): Promise<Brand[]>{
         const brands = await this.brandRepository.createQueryBuilder('brand')
             .where('brand.name ILIKE :searchName', { searchName: `%${name}%` })
