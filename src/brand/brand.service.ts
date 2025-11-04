@@ -10,6 +10,10 @@ export class BrandService{
         private readonly brandRepository: Repository<Brand>,
     ) {}
 
+    async findAll(): Promise<Brand[]> {
+        return this.brandRepository.find();
+    }
+
     async findBySlug(slug: string): Promise<Brand>{
             const brand = await this.brandRepository.findOneBy({
                 slug: slug,
