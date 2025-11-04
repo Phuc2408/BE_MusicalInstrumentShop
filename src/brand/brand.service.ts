@@ -11,7 +11,11 @@ export class BrandService{
     ) {}
 
     async findAll(): Promise<Brand[]> {
-        return this.brandRepository.find();
+        return this.brandRepository.find({
+        order: {
+            name: "ASC", 
+        }
+    });
     }
 
     async findBySlug(slug: string): Promise<Brand>{
