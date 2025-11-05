@@ -12,6 +12,9 @@ export class Category{
     @Column({ type: 'varchar', length: 100, unique: true })
     slug: string;
     
+    @Column({ type: 'int', name: 'parent_id', nullable: true })
+    parent_id: number | null;
+
     @ManyToOne(() => Category, category => category.children, { nullable: true })
     @JoinColumn({ name: 'parent_id' })
     parent: Category;

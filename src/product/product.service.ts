@@ -6,17 +6,8 @@ import { CategoryService } from 'src/category/category.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { Repository } from 'typeorm';
+import { IProduct, PaginationResult } from 'src/common/types/products/product.type';
 
-export interface PaginationResult {
-    data: Product[];
-    total: number;
-    currentPage: number;
-    limit: number;
-    totalPages: number;
-    entityName: string;
-    entitySlug: string;
-    entityType: 'brand' | 'category';
-}
 
 @Injectable()
 export class ProductService {
@@ -123,9 +114,23 @@ export class ProductService {
             entityType: type,
         };
     }
-  async findProductDetailBySlug(slug: string) {
-    const productDetail = await this.productRepository.findOneBy({
-      slug: slug,
+  async findProductDetailBySlug(slug: string): Promise<IProduct> {
+    const productDetail = await this.productRepository.findOne({
+      where: {
+                slug: slug,
+            },
+            relations: [
+                'brand',    
+                'category', 
+                'images',   
+            ],
+           
+            order: {
+                images: {
+                    is_main: 'DESC', 
+                    created_at: 'ASC', 
+                }
+            }
     })
     
     if (!productDetail) {

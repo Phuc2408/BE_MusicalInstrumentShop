@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Category } from "./entities/category.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { IsNull, Repository } from "typeorm";
 
 
 @Injectable()
@@ -22,6 +22,12 @@ export class CategoryService{
         
         return category;
     }
+
+    async findAllCategories(): Promise<Category[]> {
+    return this.categoryRepository.find({
+        order: { id: 'ASC' } 
+    });
+}
 
     async findByName(name: string): Promise<Category[]>{
         const categories = await this.categoryRepository.createQueryBuilder('category')

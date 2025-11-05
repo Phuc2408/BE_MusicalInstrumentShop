@@ -23,7 +23,7 @@ export class ProductController {
       return this.productService.filterAndPaginateBySlug(slug, 'brand', page, limit); 
   }
 
-  @Get('category/:slug')
+  @Get('categories/:slug')
   async getProductsByCategorySlug(
       @Param('slug') slug: string, 
       @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
