@@ -1,9 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Cart } from 'src/cart/entities/cart.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 
 @Entity('User') 
 export class User {
   @PrimaryGeneratedColumn('increment', { name: 'user_id' }) 
   user_id: number;
+  
+  @OneToOne(() => Cart, cart => cart.user)
+  cart: Cart;
 
   @Column({ name: 'full_name', type: 'varchar', length: 100, nullable: false }) 
   full_name: string;
@@ -26,7 +30,7 @@ export class User {
   @Column({ type: 'date', nullable: true })
   dob: Date | null;
 
-  @Column({ name: 'refresh_token_hash', type: 'varchar', length: 100, nullable: true })
+  @Column({ name: 'refresh_token_hash', type: 'varchar', length: 255, nullable: true })
   refreshTokenHash: string | null; 
 
   @Column({ type: 'varchar', length: 20, default: 'customer' })

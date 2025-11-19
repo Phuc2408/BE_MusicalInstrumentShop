@@ -19,7 +19,7 @@ export class UsersService {
   async findOneByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email },
-      select: ['user_id', 'email', 'passwordHash', 'role', 'loginMethod'], 
+      select: ['user_id','full_name', 'email', 'passwordHash', 'role', 'loginMethod'], 
     });
   }
   // await this.usersService.updatePassword(user.user_id, hashedPassword);

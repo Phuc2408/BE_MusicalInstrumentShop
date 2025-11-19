@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column,  CreateDateColumn, UpdateDateCo
 import { Brand } from '../../brand/entities/brand.entity'
 import { Category } from 'src/category/entities/category.entity';
 import { ProductImage } from './product-image.entity';
+import { CartItem } from 'src/cart/entities/cart-item.entity';
 
 @Entity('products')
 export class Product {
@@ -18,6 +19,9 @@ export class Product {
     
     @OneToMany(() => ProductImage, image => image.product, { cascade: true })
     images: ProductImage[];
+
+    @OneToMany(() => CartItem, cartItem => cartItem.product)
+    cartItems: CartItem[];
   
     @Column({ type: 'varchar', length: 255 })
     product_name: string;

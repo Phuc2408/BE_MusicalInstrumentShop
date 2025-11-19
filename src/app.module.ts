@@ -15,37 +15,48 @@ import { Brand } from './brand/entities/brand.entity';
 import { Category } from './category/entities/category.entity';
 import { Product } from './product/entities/product.entity';
 import { ProductImage } from './product/entities/product-image.entity';
+import { Cart } from './cart/entities/cart.entity';
+import { CartItem } from './cart/entities/cart-item.entity';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RedisModule } from './redis/redis.module';
+import { CartModule } from './cart/cart.module';
+
 
 @Module({
   imports: [UsersModule,
     AuthModule,
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        url: configService.get<string>('POSTGRES_URL'), 
-        
+        url: configService.get<string>('POSTGRES_URL'),
+
         entities: [
-          User, PasswordResetToken, Brand, Category, Product, ProductImage
+          User, PasswordResetToken, Brand, Category, Product, ProductImage, Cart, CartItem
         ],
-        
-        synchronize: process.env.NODE_ENV !== 'production', 
-        
+
+        synchronize: process.env.NODE_ENV !== 'production',
+
         ssl: {
-          rejectUnauthorized: false, 
+          rejectUnauthorized: false,
         },
+        connectionTimeoutMillis: 30000,
       }),
     }),
     MailerModule,
     ProductModule,
     BrandModule,
     CategoryModule,
+    RedisModule,
+    CartModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,
+  ],
 })
-export class AppModule {}
+export class AppModule { }

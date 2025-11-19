@@ -46,7 +46,7 @@ export class AuthService {
 
     async register(createUserDto: CreateUserDto, role: string = 'customer') {
         if (await this.usersService.isEmailTaken(createUserDto.email)) {
-            throw new ConflictException('Email is exist');
+            throw new ConflictException('Email is existed');
         }
         
         const salt = await bcrypt.genSalt();
@@ -96,7 +96,6 @@ export class AuthService {
             secret: JWT_SECRET, 
             expiresIn: REFRESH_EXPIRES,
         });
-        
         const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
         await this.usersService.updateRefreshTokenHash(user.user_id, refreshTokenHash);
         
@@ -112,18 +111,33 @@ export class AuthService {
         };
     }
 
+    
     async refreshTokens(userId: number, currentRefreshToken: string): Promise<any>{
+        console.log("user id:")
+        console.log(userId)
+        console.log("current token:")
+        console.log(currentRefreshToken)
         const user = await this.usersService.findOneById(userId);
-        if (!user || !user.refreshTokenHash) {
-            throw new UnauthorizedException('Access Denied: Refresh token not found.');
-        }
-        const isMatch = await bcrypt.compare(currentRefreshToken, user.refreshTokenHash);
-        if (!isMatch) {
 
-        await this.usersService.updateRefreshTokenHash(userId, null);
-        throw new UnauthorizedException('Access Denied: Invalid refresh token.');
+        console.log("token DB:")
+        console.log(user?.refreshTokenHash)
+    // 1. Kiểm tra sự tồn tại của User và Refresh Token Hash trong DB
+        if (!user || !user.refreshTokenHash) {
+        // Nếu không tìm thấy User hoặc Hash, có thể là do người dùng đã bị logout (hash = null)
+        throw new UnauthorizedException('Access Denied: Refresh token not found or user logged out.');
         }
-        return this.login(user);
+        
+        // 2. So sánh Refresh Token từ request với Hash đã lưu trong DB
+        const isMatch = await bcrypt.compare(currentRefreshToken, user.refreshTokenHash);
+
+    // 3. Xử lý kết quả so sánh
+    if (isMatch) {
+        return await this.login(user);
+    } 
+    else {
+        await this.usersService.updateRefreshTokenHash(userId, null);
+        throw new UnauthorizedException('Invalid refresh token. All associated tokens have been revoked.');
+        }
     }
 
     async resetPassword(tokenString: string, newPassword: string): Promise<void>{

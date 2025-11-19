@@ -73,10 +73,9 @@ export class AuthController {
         type: AuthResponse 
     })
     @ApiResponse({ status: 401, description: 'Unauthorized / Invalid Refresh Token' })
-    async refreshTokens(@Request() req: { user: any }, @Body() refreshDto: RefreshTokenDto) {
+    async refreshTokens(@Request() req: { user: any }) {
         const userId = req.user.userId;
         const refreshToken = req.user.refreshToken; 
-
         return this.authService.refreshTokens(userId, refreshToken);
     }
 
