@@ -20,6 +20,9 @@ import { CartItem } from './cart/entities/cart-item.entity';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from './redis/redis.module';
 import { CartModule } from './cart/cart.module';
+import { OrderModule } from './order/order.module';
+import { Order } from './order/entities/order.entity';
+import { OrderItem } from './order/entities/order-item.entity';
 
 
 @Module({
@@ -37,7 +40,7 @@ import { CartModule } from './cart/cart.module';
         url: configService.get<string>('POSTGRES_URL'),
 
         entities: [
-          User, PasswordResetToken, Brand, Category, Product, ProductImage, Cart, CartItem
+          User, PasswordResetToken, Brand, Category, Product, ProductImage, Cart, CartItem, Order, OrderItem
         ],
 
         synchronize: process.env.NODE_ENV !== 'production',
@@ -53,7 +56,8 @@ import { CartModule } from './cart/cart.module';
     BrandModule,
     CategoryModule,
     RedisModule,
-    CartModule
+    CartModule,
+    OrderModule
   ],
   controllers: [AppController],
   providers: [AppService,

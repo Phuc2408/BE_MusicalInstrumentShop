@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cart } from './entities/cart.entity';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CartItem } from './entities/cart-item.entity';
 import { Product } from 'src/product/entities/product.entity';
 import Redis from 'ioredis';
@@ -75,14 +75,12 @@ export class CartService {
 
         if (cachedCart) {
             try {
-                // 🔥 [FIX QUAN TRỌNG]: Thử Parse JSON
-                // Nếu cachedCart là rác (vd: "cart:1"), dòng này sẽ gây lỗi và nhảy xuống catch
+
                 const parsedCart = JSON.parse(cachedCart);
 
                 // Nếu parse thành công, trả về ngay
                 return { data: { cart_items: parsedCart } };
             } catch (error) {
-                // 🚑 CẤP CỨU: Nếu lỗi JSON.parse -> Redis đang chứa rác!
                 console.warn(`[Redis Error] Cache của user ${userId} bị hỏng (Format sai). Đang tự động xóa...`);
 
                 // Xóa ngay cái key bị lỗi đi để lần sau không gặp lại
@@ -170,14 +168,45 @@ export class CartService {
         return this.refreshRedisCart(userId);
     }
 
-    async deleteCart(userId: number) {
-        const cart = await this.cartRepository.findOne({ where: { userId } });
-        if (cart) {
-            await this.cartItemRepository.delete({ cart_id: cart.id });
+    // Function clear cart cho non transaction và cả transaction cho thanh toán
+    async clearCart(userId: number, entityManager?: EntityManager): Promise<void | { data: any }> {
+
+        if (entityManager) {
+
+            // 1. Tìm Cart (Dùng Manager, cần Entity Class)
+            const cart = await entityManager.findOne(Cart, { where: { userId } });
+
+            if (cart) {
+                await entityManager.delete(CartItem, { cart_id: cart.id });
+
+                await entityManager.delete(Cart, { userId });
+            }
+
+        } else {
+
+            const cart = await this.cartRepository.findOne({ where: { userId } });
+
+            if (cart) {
+                await this.cartItemRepository.delete({ cart_id: cart.id });
+                await this.cartRepository.delete({ userId });
+            }
+
+            //  Xóa Cache (Redis)
+            await this.redis.del(this.getRedisKey(userId));
+
+            return { data: { cart_items: [] } };
         }
+    }
 
-        await this.redis.del(this.getRedisKey(userId));
-
-        return { data: { cart_items: [] } };
+    // Function này giúp cho chức năng thanh toán
+    async getRawCart(userId: number): Promise<Cart> {
+        const cart = await this.cartRepository.findOne({
+            where: { userId },
+            relations: ['items', 'items.product']
+        })
+        if (!cart) {
+            throw new NotFoundException('Giỏ hàng không tồn tại.');
+        }
+        return cart;
     }
 }

@@ -38,7 +38,7 @@ export class CartController {
     @Delete()
     clearCart(@Req() req) {
         const userId = req.user.user_id;
-        return this.cartService.deleteCart(userId);
+        return this.cartService.clearCart(userId);
     }
 
     @Post('sync')
