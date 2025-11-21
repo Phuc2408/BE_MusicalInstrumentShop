@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from 'src/users/users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from 'src/users/entities/user.entity';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
