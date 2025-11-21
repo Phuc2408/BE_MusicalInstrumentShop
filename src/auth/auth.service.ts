@@ -196,7 +196,7 @@ export class AuthService {
         });
         await this.tokenRepository.save(newToken);
         try {
-            const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+            const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
             const resetLink = `${frontendUrl}/reset-password?token=${tokenString}`;
             await this.mailService.sendPasswordResetEmail(
                 user.email,
