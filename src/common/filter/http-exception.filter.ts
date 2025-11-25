@@ -5,7 +5,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { IBackendRes } from '../types/common.type'; 
+import { BackendRes } from '../types/common.type';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -17,7 +17,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     let message: string | string[];
     let error: string;
-    
+
     if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
       const res = exceptionResponse as { message: string | string[], error: string };
       message = res.message || exception.message;
@@ -27,7 +27,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error = exception.name;
     }
 
-    const errorResponse: IBackendRes<any> = {
+    const errorResponse: BackendRes<any> = {
       statusCode: status,
       message: message,
       error: error,

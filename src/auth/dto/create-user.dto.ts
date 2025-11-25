@@ -7,25 +7,25 @@ export class CreateUserDto {
         example: 'john.doe@example.com',
         description: "The user's email address used for authentication and communication."
     })
-    @IsEmail()
-    @IsNotEmpty()
+    @IsEmail({}, { message: 'Please provide a valid email address' })
+    @IsNotEmpty({ message: 'Email is required' })
     email: string;
 
     @ApiProperty({
         example: 'SecureP@ss123',
         description: "Password for the user account. Must be at least 6 characters."
     })
-    @IsString()
-    @IsNotEmpty()
-    @MinLength(6)
+    @IsString({ message: 'Password must be a string' })
+    @IsNotEmpty({ message: 'Password is required' })
+    @MinLength(6, { message: 'Password must be at least 6 characters long' })
     password: string;
 
     @ApiProperty({
         example: 'John Doe',
         description: "The user's full name as displayed in the application."
     })
-    @IsString()
-    @IsNotEmpty()
+    @IsString({ message: 'Full name must be a string' })
+    @IsNotEmpty({ message: 'Full name is required' })
     full_name: string;
 
     @ApiPropertyOptional({
@@ -33,7 +33,7 @@ export class CreateUserDto {
         description: "Primary contact phone number, including country code."
     })
     @IsOptional()
-    @IsString()
+    @IsString({ message: 'Phone number must be a valid string' })
     phone?: string;
 
     @ApiPropertyOptional({
@@ -41,7 +41,7 @@ export class CreateUserDto {
         description: "Physical mailing address for billing or shipping purposes."
     })
     @IsOptional()
-    @IsString()
+    @IsString({ message: 'Address must be a valid string' })
     address?: string;
 
     @ApiPropertyOptional({
@@ -50,6 +50,6 @@ export class CreateUserDto {
         format: 'date'
     })
     @IsOptional()
-    @IsDateString()
+    @IsDateString({}, { message: 'Date of birth must be in YYYY-MM-DD format' })
     dob?: string;
 }

@@ -10,9 +10,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MailerService } from '../mailer/mailer.service';
 import { v4 as uuidv4 } from 'uuid';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
+    private googleExchangeClient: OAuth2Client;
+    private googleVerifyClient: OAuth2Client;
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
@@ -21,7 +24,69 @@ export class AuthService {
 
         @InjectRepository(PasswordResetToken)
         private readonly tokenRepository: Repository<PasswordResetToken>,
-    ) { }
+    ) {
+        const GOOGLE_CLIENT_ID = this.configService.get<string>('GOOGLE_CLIENT_ID');
+        const GOOGLE_SECRET_ID = this.configService.get<string>('GOOGLE_SECRET_ID');
+
+        if (!GOOGLE_CLIENT_ID || !GOOGLE_SECRET_ID) {
+            throw new Error('Google environment variables (ID or Secret) are not configured.');
+        }
+
+        this.googleExchangeClient = new OAuth2Client(
+            GOOGLE_CLIENT_ID,
+            GOOGLE_SECRET_ID,
+            this.configService.get<string>('GOOGLE_REDIRECT_URI') || 'postmessage',
+        );
+
+        this.googleVerifyClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+    }
+
+    async verifyGoogleCode(code: string): Promise<any> {
+        if (!this.googleExchangeClient) {
+            throw new Error('Google config missing');
+        }
+
+        let idToken: string | null | undefined;
+
+        // A. Đổi Code lấy Token
+        try {
+            const { tokens } = await this.googleExchangeClient.getToken(code);
+            idToken = tokens.id_token;
+            if (!idToken) {
+                throw new UnauthorizedException('Failed to retrieve ID token from Google.');
+            }
+        } catch (error) {
+            console.error("Error exchanging code:", error.message);
+            throw new UnauthorizedException('Invalid or expired Google authorization code.');
+        }
+
+        // B. Verify ID Token
+        try {
+            const ticket = await this.googleVerifyClient.verifyIdToken({
+                idToken: idToken,
+                audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+            });
+            const payload = ticket.getPayload();
+
+            if (!payload || !payload.sub || !payload.email) {
+                throw new UnauthorizedException('Invalid Google ID token payload');
+            }
+
+            // C. Tạo profile object giống như cũ
+            const profile = {
+                id: payload.sub,
+                displayName: payload.name,
+                emails: [{ value: payload.email }],
+            };
+
+            // D. Gọi lại hàm xử lý user cũ của bạn
+            return this.handleSocialLogin('google', profile);
+
+        } catch (error) {
+            console.error("Verification failed:", error.message);
+            throw new UnauthorizedException('Invalid Google ID token or verification failed.');
+        }
+    }
 
     async validateUser(email: string, password: string): Promise<any> {
         const user = await this.usersService.findOneByEmail(email);

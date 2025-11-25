@@ -1,8 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Param, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ProductService } from './product.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import {
+  ApiBadRequest,
+  ApiInternalServerError,
+  ApiNotFound,
+  ApiOkResponseData
+} from 'src/common/decorators/swagger.decorator';
+import { BrandListResponse, CategoryListResponse, ProductDetailResponse, SearchResponse } from './dto/product.response.dto';
+
+
 
 @ApiTags('Products')
 @Controller('v1/products')
@@ -10,74 +17,56 @@ export class ProductController {
   constructor(private readonly productService: ProductService) { }
 
   @Get('search')
-  @ApiOperation({ summary: 'Search products and collections by query' })
-  @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async search(@Query('q') query: string) {
-    if (!query) {
-      return { collections: [], products: [] }
-    }
-    return this.productService.unifiedSearch(query);
+  @ApiOperation({ summary: 'Search products and collections' })
+  @ApiOkResponseData(SearchResponse)
+  @ApiBadRequest('Invalid query parameter')
+  async search(@Query('q') query: string): Promise<SearchResponse> {
+    const result = await this.productService.unifiedSearch(query);
+    return result as unknown as SearchResponse;
   }
 
   @Get('brands/:slug')
-  @ApiOperation({ summary: 'Get paginated products filtered by brand slug' })
-  @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({ summary: 'Get paginated products by Brand Slug' })
+
+  @ApiOkResponseData(BrandListResponse)
+
+  @ApiBadRequest('Invalid page or limit')
+  @ApiNotFound('Brand not found')
   async getProductsByBrandSlug(
     @Param('slug') slug: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(64), ParseIntPipe) limit: number,
-  ) {
-    return this.productService.filterAndPaginateBySlug(slug, 'brand', page, limit);
+  ): Promise<BrandListResponse> {
+    const result = await this.productService.filterAndPaginateBySlug(slug, 'brand', page, limit);
+    return result as unknown as BrandListResponse;
   }
 
+  // --- 3. GET LIST BY CATEGORY ---
   @Get('categories/:slug')
-  @ApiOperation({ summary: 'Get paginated products filtered by category slug' })
-  @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({ summary: 'Get paginated products by Category Slug' })
+
+  @ApiOkResponseData(CategoryListResponse)
+
+  @ApiBadRequest('Invalid page or limit')
+  @ApiNotFound('Category not found')
   async getProductsByCategorySlug(
     @Param('slug') slug: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(64), ParseIntPipe) limit: number,
-  ) {
-    return this.productService.filterAndPaginateBySlug(slug, 'category', page, limit);
+  ): Promise<CategoryListResponse> {
+    const result = await this.productService.filterAndPaginateBySlug(slug, 'category', page, limit);
+    return result as unknown as CategoryListResponse;
   }
 
   @Get(':slug')
-  @ApiOperation({ summary: 'Get product detail by product slug' })
-  @ApiResponse({ status: 200, description: 'Success' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProductByProductSlug(@Param('slug') slug: string) {
-    return this.productService.findProductDetailBySlug(slug)
+  @ApiOperation({ summary: 'Get product detail by Slug' })
+
+  @ApiOkResponseData(ProductDetailResponse)
+
+  @ApiNotFound('Product not found')
+  @ApiInternalServerError()
+  async getProductByProductSlug(@Param('slug') slug: string): Promise<ProductDetailResponse> {
+    const product = await this.productService.findProductDetailBySlug(slug);
+    return product as unknown as ProductDetailResponse;
   }
-
-  // @Post()
-  // create(@Body() createProductDto: CreateProductDto) {
-  //   return this.productService.create(createProductDto);
-  // }
-
-  // @Get()
-  // findAll() {
-  //   return this.productService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.productService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-  //   return this.productService.update(+id, updateProductDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.productService.remove(+id);
-  // }
 }

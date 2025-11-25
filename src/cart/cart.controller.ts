@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } fro
 import { CartService } from './cart.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiCreatedResponse } from '@nestjs/swagger';
 
 @ApiTags('Cart')
 @UseGuards(AuthGuard('jwt'))
@@ -21,7 +21,6 @@ export class CartController {
 
     @Post('items')
     @ApiOperation({ summary: 'Add an item to the cart' })
-    @ApiResponse({ status: 200, description: 'Success' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     addToCart(@Req() req, @Body() dto: AddToCartDto) {

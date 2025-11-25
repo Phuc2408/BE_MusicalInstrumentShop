@@ -7,6 +7,6 @@ import { BrandController } from './brand.controller';
     imports: [TypeOrmModule.forFeature([Brand])],
     controllers: [BrandController],
     providers: [BrandService],
-    exports:[BrandService,]
+    exports: [BrandService,]
 })
-export class BrandModule {}
+export class BrandModule { }

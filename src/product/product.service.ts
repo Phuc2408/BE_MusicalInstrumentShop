@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { Repository } from 'typeorm';
 import { IProduct, PaginationResult } from 'src/common/types/products/product.type';
+import { Category } from 'src/category/entities/category.entity';
+// import { SearchResultDTO } from './dto/search-result.dto';
 
 
 @Injectable()
@@ -16,26 +18,51 @@ export class ProductService {
     private readonly categoryService: CategoryService,
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @InjectRepository(Category)
+    private categoryRepository: Repository<Category>,
   ) { }
 
-  async unifiedSearch(query: string): Promise<any>{
-    const brands = await this.brandService.findByName(query);
-    const categories = await this.categoryService.findByName(query);
+  async unifiedSearch(query: string) {
+    // 1. Nếu query rỗng, trả về rỗng luôn (Optional - nếu Controller chưa check)
+    if (!query) {
+      return { collections: [], products: [] };
+    }
 
-    const brandIds = brands.map(brand => brand.id)
-    const categoryIds = categories.map(category => category.id)
-    
-    const products = await this.getProductBySearch(query, brandIds, categoryIds)
+    // 2. Tối ưu: Chạy song song tìm Brand và Category (nhanh hơn await từng cái)
+    const [brands, categories] = await Promise.all([
+      this.brandService.findByName(query),
+      this.categoryService.findByName(query),
+    ]);
 
-    const collections = [
-      ...brands.map(brand => ({ ...brand, type: 'brand' })),
-      ...categories.map(category=>({...category, type:'category'}))
-    ]
-    
-    return {collections, products}
+    const brandIds = brands.map(brand => brand.id);
+    const categoryIds = categories.map(category => category.id);
+
+    // 3. Tìm sản phẩm dựa trên từ khóa + brand/category tìm được
+    const products = await this.getProductBySearch(query, brandIds, categoryIds);
+
+    // 4. Map dữ liệu về đúng cấu trúc SearchCollectionResponse
+    const mappedBrands = brands.map(brand => ({
+      id: brand.id,
+      name: brand.name, // Check lại entity brand của bạn là 'name' hay 'brand_name'
+      slug: brand.slug,
+      type: 'brand' as const // Ép kiểu để khớp với enum DTO
+    }));
+
+    const mappedCategories = categories.map(cat => ({
+      id: cat.id,
+      name: cat.name, // Check lại entity category là 'name' hay 'category_name'
+      slug: cat.slug,
+      type: 'category' as const
+    }));
+
+    // 5. Trả về Object thuần (Interceptor sẽ bọc nó vào field data)
+    return {
+      collections: [...mappedBrands, ...mappedCategories],
+      products: products
+    };
   }
 
-  private async getProductBySearch(query: string, brandIds: number[], categoryIds: number[]): Promise<any>{
+  private async getProductBySearch(query: string, brandIds: number[], categoryIds: number[]): Promise<any> {
     const searchName = `%${query}%`
     const qb = this.productRepository.createQueryBuilder('p')
 
@@ -46,93 +73,109 @@ export class ProductService {
     }
 
     if (categoryIds.length > 0) {
-      qb.orWhere('p.category_id IN (:...categoryIds)', {categoryIds})
+      qb.orWhere('p.category_id IN (:...categoryIds)', { categoryIds })
     }
     return qb.limit(10).getMany();
   }
 
   async filterAndPaginateBySlug(
-        slug: string, 
-        type: 'brand' | 'category', 
-        page: number, 
-        limit: number
-    ): Promise<PaginationResult> {
-        
-        let brandId: number | null = null;
-        let categoryId: number | null = null;
-        let entityName: string = '';
-        const finalLimit = limit > 0 ? limit : 64;
+    slug: string,
+    type: 'brand' | 'category',
+    page: number,
+    limit: number
+  ): Promise<PaginationResult> {
 
-        if (type === 'brand') {
-            const brand = await this.brandService.findBySlug(slug); 
-            brandId = brand.id;
-            entityName = brand.name;
-        } else { 
-            const category = await this.categoryService.findBySlug(slug);
-            categoryId = category.id;
-            entityName = category.name;
-        }
-        
-        return this.queryProductsCore(brandId, categoryId, entityName, slug, page, finalLimit);
+    let brandId: number | null = null;
+    let categoryIds: number[] = [];
+    let entityName: string = '';
+    const finalLimit = limit > 0 ? limit : 64;
+
+    if (type === 'brand') {
+      const brand = await this.brandService.findBySlug(slug);
+      brandId = brand.id;
+      entityName = brand.name;
+    } else {
+      const category = await this.categoryService.findBySlug(slug);
+      entityName = category.name;
+      if (slug === 'accessories') {
+        categoryIds.push(category.id);
+        const subCategories = await this.categoryRepository.find({
+          where: {
+            // Nếu bạn define relation trong TypeORM là 'parent'
+            parent: { id: category.id }
+          },
+          select: ['id']
+        });
+        const subIds = subCategories.map(sub => sub.id);
+        categoryIds.push(...subIds);
+      }
+      else {
+        categoryIds = [category.id];
+      }
     }
+
+    return this.queryProductsCore(brandId, categoryIds, entityName, slug, page, finalLimit);
+  }
 
   private async queryProductsCore(
-        brandId: number | null, 
-        categoryId: number | null, 
-        entityName: string, 
-        entitySlug: string, 
-        page: number, 
-        limit: number
-    ): Promise<PaginationResult> {
-        
-        const skip = (page - 1) * limit;
+    brandId: number | null,
+    categoryIds: number[],
+    entityName: string,
+    entitySlug: string,
+    page: number,
+    limit: number
+  ): Promise<PaginationResult> {
 
-        const qb = this.productRepository.createQueryBuilder('product')
-            .leftJoinAndSelect('product.brand', 'brand') 
-            .leftJoinAndSelect('product.images', 'image')
-            .skip(skip)
-            .take(limit);
+    const skip = (page - 1) * limit;
 
-        if (categoryId) {
-            qb.where('product.category_id = :categoryId', { categoryId });
-        } else if (brandId) {
-            qb.where('product.brand_id = :brandId', { brandId });
-        }
-        
-        const [products, total] = await qb.getManyAndCount();
-        const totalPages = Math.ceil(total / limit);
-        const type = categoryId ? 'category' : 'brand'; 
+    const qb = this.productRepository.createQueryBuilder('product')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.images', 'image')
+      .skip(skip)
+      .take(limit);
 
-        return {
-            data: products,
-            total: total, 
-            currentPage: page,
-            limit: limit,
-            totalPages: totalPages,
-            entityName: entityName,
-            entitySlug: entitySlug,
-            entityType: type,
-        };
+    if (categoryIds && categoryIds.length > 0) {
+      qb.where('product.category_id IN (:...categoryIds)', { categoryIds });
+    } else if (brandId) {
+      qb.where('product.brand_id = :brandId', { brandId });
     }
+
+    qb.orderBy('product.created_at', 'DESC');
+
+    const [products, total] = await qb.getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+    const type = (categoryIds && categoryIds.length > 0) ? 'category' : 'brand';
+
+    return {
+      data: products,
+      total: total,
+      currentPage: page,
+      limit: limit,
+      totalPages: totalPages,
+      entityName: entityName,
+      entitySlug: entitySlug,
+      entityType: type,
+    };
+  }
   async findProductDetailBySlug(slug: string): Promise<IProduct> {
     const productDetail = await this.productRepository.findOne({
       where: {
-                slug: slug,
-            },
-            relations: [
-                'brand',    
-                'category', 
-                'images',   
-            ],
-           
-            order: {
-                images: {
-                    is_main: 'DESC', 
-                    created_at: 'ASC', 
-                }
-            }
+        slug: slug,
+      },
+      relations: [
+        'brand',
+        'category',
+        'images',
+      ],
+
+      order: {
+        images: {
+          is_main: 'DESC',
+          created_at: 'ASC',
+        }
+      }
     })
-    
+
     if (!productDetail) {
       throw new NotFoundException(`Product with slug "${slug}" not found.`);
     }

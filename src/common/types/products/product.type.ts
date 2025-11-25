@@ -1,17 +1,17 @@
 export interface IProduct {
     id: number;
-    
-    brand: IBrand; 
-    category: ICategory; 
-    images: IProductImage[]; 
- 
+
+    brand: IBrand;
+    category: ICategory;
+    images: IProductImage[];
+
     product_name: string;
     slug: string;
-    price_display: string | null; 
-    description: string | null; 
-    price_numeric: number; 
+    price_display: string | null;
+    description: string | null;
+    price_numeric: number;
     stock_quantity: number;
-    specifications: object | null; 
+    specifications: object | null;
 }
 
 export interface IBrand {
@@ -19,12 +19,12 @@ export interface IBrand {
 
     name: string;
     slug: string;
-    description: string | null; 
-    
+    description: string | null;
+
     created_at: Date;
     updated_at: Date;
-    
-    products: IProduct[]; 
+
+    products: IProduct[];
 }
 
 export interface ICategory {
@@ -32,12 +32,12 @@ export interface ICategory {
 
     name: string;
     slug: string;
-    
-    parent: ICategory | null; 
+
+    parent: ICategory | null;
     children: ICategory[];
-    
+
     products: IProduct[];
-    
+
 }
 
 export interface IProductImage {
@@ -45,10 +45,10 @@ export interface IProductImage {
 
     image_url: string;
     is_main: boolean;
-    
+
     created_at: Date;
-    
-    product: IProduct; 
+
+    product: IProduct;
 }
 
 export interface PaginationResult {
