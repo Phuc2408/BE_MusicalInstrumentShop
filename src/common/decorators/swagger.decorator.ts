@@ -10,22 +10,42 @@ import { BaseResponseDto } from '../types/common.type';
  * Dùng cho API trả về Data (VD: Login, Get Profile, Get List)
  * @param dataDto Class DTO của phần data (VD: AuthDataResponse, UserInfoResponse)
  */
-export const ApiOkResponseData = <DataDto extends Type<unknown>>(dataDto: DataDto) =>
-    applyDecorators(
-        ApiExtraModels(BaseResponseDto, dataDto),
+export const ApiOkResponseData = <DataDto extends Type<unknown>>(
+    dataDto: DataDto | [DataDto],
+) => {
+    // 1. Kiểm tra xem đầu vào có phải là mảng không (ví dụ: [BrandResponse])
+    const isArray = Array.isArray(dataDto);
+
+    // 2. Lấy ra Class chính (nếu là mảng thì lấy phần tử đầu tiên)
+    const model = isArray ? (dataDto as [DataDto])[0] : (dataDto as DataDto);
+
+    return applyDecorators(
+        // Đăng ký model với Swagger để tạo schema ref
+        ApiExtraModels(BaseResponseDto, model),
+
         ApiOkResponse({
             schema: {
                 allOf: [
+                    // Kế thừa các trường cơ bản (statusCode, message...) từ BaseResponseDto
                     { $ref: getSchemaPath(BaseResponseDto) },
                     {
                         properties: {
-                            data: { $ref: getSchemaPath(dataDto) },
+                            // Cấu hình field 'data' tùy theo là mảng hay object đơn
+                            data: isArray
+                                ? {
+                                    type: 'array',
+                                    items: { $ref: getSchemaPath(model) }, // Nếu là mảng
+                                }
+                                : {
+                                    $ref: getSchemaPath(model), // Nếu là object đơn
+                                },
                         },
                     },
                 ],
             },
         }),
     );
+};
 
 /**
  * Dùng cho API chỉ trả về Message, không có Data (VD: Logout, Forgot Pass, Delete)

@@ -33,7 +33,7 @@ export class AuthController {
 
     @ApiOperation({ summary: 'Create a new user account' })
     @ApiCreatedResponseData(UserInfoResponse)
-    @ApiBadRequest(['email must be an email', 'password is too weak'])
+    @ApiBadRequest(['email must be an email'])
     @ApiConflict('Email is existed')
     @Post('register')
     async register(@Body() createUserDto: CreateUserDto): Promise<UserInfoResponse> {
@@ -61,7 +61,7 @@ export class AuthController {
     @Post('login/google')
     @ApiOperation({ summary: 'Authenticate using a Google token' })
     @ApiOkResponseData(AuthDataResponse)
-    @ApiBadRequest('Invalid Google Token')
+    @ApiBadRequest('Invalid or expired Google authorization code.')
     @ApiUnauthorized('Google Authentication Failed')
     async loginGoogle(@Body() googleDto: GoogleLoginDto): Promise<AuthDataResponse> {
         const user = await this.authService.verifyGoogleCode(googleDto.code);

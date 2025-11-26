@@ -4,7 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateUserDto {
 
     @ApiProperty({
-        example: 'john.doe@example.com',
+        example: 'email@test.com',
         description: "The user's email address used for authentication and communication."
     })
     @IsEmail({}, { message: 'Please provide a valid email address' })
@@ -21,7 +21,7 @@ export class CreateUserDto {
     password: string;
 
     @ApiProperty({
-        example: 'John Doe',
+        example: 'Nguyen Van A',
         description: "The user's full name as displayed in the application."
     })
     @IsString({ message: 'Full name must be a string' })
@@ -29,7 +29,7 @@ export class CreateUserDto {
     full_name: string;
 
     @ApiPropertyOptional({
-        example: '+1-555-123-4567',
+        example: '+84919421414',
         description: "Primary contact phone number, including country code."
     })
     @IsOptional()
@@ -37,7 +37,7 @@ export class CreateUserDto {
     phone?: string;
 
     @ApiPropertyOptional({
-        example: '123 Main St, Anytown, NY 12345, USA',
+        example: '284/20 Phan Huy Ich phuong 12 quan Go Vap',
         description: "Physical mailing address for billing or shipping purposes."
     })
     @IsOptional()
@@ -45,7 +45,7 @@ export class CreateUserDto {
     address?: string;
 
     @ApiPropertyOptional({
-        example: '1990-01-01',
+        example: '2004-08-24',
         description: "Date of birth in ISO 8601 format (YYYY-MM-DD).",
         format: 'date'
     })

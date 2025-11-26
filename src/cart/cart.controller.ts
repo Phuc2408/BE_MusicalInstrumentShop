@@ -2,9 +2,12 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } fro
 import { CartService } from './cart.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { CartResponseDto } from './dto/cart.response.dto';
+import { ApiBadRequest, ApiCreatedResponseData, ApiNotFound, ApiOkResponseData, ApiUnauthorized } from 'src/common/decorators/swagger.decorator';
 
 @ApiTags('Cart')
+@ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
 @Controller('v1/cart')
 export class CartController {
@@ -12,8 +15,8 @@ export class CartController {
 
     @Get()
     @ApiOperation({ summary: 'Retrieve the user cart' })
-    @ApiResponse({ status: 200, description: 'Success' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOkResponseData(CartResponseDto)
+    @ApiUnauthorized()
     getCart(@Req() req) {
         const userId = req.user.user_id;
         return this.cartService.getCart(userId);
@@ -21,8 +24,10 @@ export class CartController {
 
     @Post('items')
     @ApiOperation({ summary: 'Add an item to the cart' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiCreatedResponseData(CartResponseDto)
+    @ApiBadRequest('Invalid product or insufficient stock')
+    @ApiUnauthorized()
+    @ApiNotFound('Product not exist')
     addToCart(@Req() req, @Body() dto: AddToCartDto) {
         const userId = req.user.user_id;
         return this.cartService.addToCart(userId, dto);
@@ -30,9 +35,10 @@ export class CartController {
 
     @Patch('items/:productId')
     @ApiOperation({ summary: 'Update the quantity of an item in the cart' })
-    @ApiResponse({ status: 200, description: 'Success' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOkResponseData(CartResponseDto)
+    @ApiBadRequest()
+    @ApiUnauthorized()
+    @ApiNotFound('Cart not found | Item not found')
     updateQuantity(
         @Req() req,
         @Param('productId') productId: number,
@@ -43,9 +49,8 @@ export class CartController {
 
     @Delete('items/:productId')
     @ApiOperation({ summary: 'Remove an item from the cart' })
-    @ApiResponse({ status: 200, description: 'Success' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOkResponseData(CartResponseDto)
+    @ApiUnauthorized()
     removeFromCart(@Req() req, @Param('productId') productId: number) {
         const userId = req.user.user_id;
         return this.cartService.removeFromCart(userId, +productId);
@@ -53,8 +58,8 @@ export class CartController {
 
     @Delete()
     @ApiOperation({ summary: 'Clear the entire cart' })
-    @ApiResponse({ status: 200, description: 'Success' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOkResponseData(CartResponseDto)
+    @ApiUnauthorized()
     clearCart(@Req() req) {
         const userId = req.user.user_id;
         return this.cartService.clearCart(userId);
