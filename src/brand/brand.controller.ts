@@ -1,9 +1,8 @@
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Brand } from "./entities/brand.entity";
 import { Controller, Get } from "@nestjs/common";
 import { BrandService } from "./brand.service";
 import { ApiOkResponseData } from "src/common/decorators/swagger.decorator";
-import { BrandResponse } from "./dto/getAllBrandRes.dto";
+import { BrandResponseDTO } from "./dto/getAllBrandRes.dto";
 
 @ApiTags('Brand')
 @Controller('v1/brands')
@@ -12,9 +11,9 @@ export class BrandController {
 
     @Get()
     @ApiOperation({ summary: 'Retrieve a list of all brands' })
-    @ApiOkResponseData([BrandResponse])
+    @ApiOkResponseData([BrandResponseDTO])
 
-    async getAllBrands(): Promise<BrandResponse[]> {
+    async getAllBrands(): Promise<BrandResponseDTO[]> {
         return this.brandService.findAll();
     }
 }

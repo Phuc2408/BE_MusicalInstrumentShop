@@ -2,8 +2,7 @@ import { Controller, Get } from "@nestjs/common";
 import { CategoryService } from "./category.service";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ApiOkResponseData } from "src/common/decorators/swagger.decorator";
-import { CategoryResponse } from "./dto/category.response.dto";
-
+import { CategoryResponseDTO } from "./dto/category.response.dto";
 @ApiTags('Category')
 @Controller('v1/categories')
 export class CategoryController {
@@ -11,9 +10,9 @@ export class CategoryController {
 
     @Get()
     @ApiOperation({ summary: 'Retrieve a list of all categories' })
-    @ApiOkResponseData([CategoryResponse])
+    @ApiOkResponseData([CategoryResponseDTO])
 
-    async getAllCategories(): Promise<CategoryResponse[]> {
+    async getAllCategories(): Promise<CategoryResponseDTO[]> {
         return this.categoryService.findAllCategories();
     }
 }

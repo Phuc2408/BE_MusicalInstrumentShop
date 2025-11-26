@@ -75,7 +75,6 @@ export class ProductDetailResponse {
     @ApiProperty({ type: () => BrandResponse })
     brand: BrandResponse;
 
-    // ✅ Có Category ở đây
     @ApiProperty({ type: () => CategoryResponse })
     category: CategoryResponse;
 
