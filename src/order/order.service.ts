@@ -3,9 +3,11 @@ import { CartService } from 'src/cart/cart.service';
 import { DataSource, Repository } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderDto, PaymentMethod } from './dto/create-order.dto';
 import { OrderItem } from './entities/order-item.entity';
 import { Product } from 'src/product/entities/product.entity';
+import { MailerService } from 'src/mailer/mailer.service';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class OrderService {
@@ -14,6 +16,8 @@ export class OrderService {
         private cartService: CartService,
         @InjectRepository(Order)
         private orderRepository: Repository<Order>,
+        private usersService: UsersService,
+        private mailService: MailerService,
     ) { }
 
     async createOrder(userId: number, dto: CreateOrderDto) {
@@ -55,10 +59,10 @@ export class OrderService {
 
             const order = new Order();
             order.userId = userId;
-            order.shipping_address = dto.address;
-            order.phone = dto.phone;
+            order.shipping_address = dto.billing.address;
+            order.phone = dto.billing.phone;
             order.total_amount = totalAmount;
-            order.payment_method = dto.paymentMethod;
+            order.payment_method = dto.payment;
             order.status = OrderStatus.PENDING;
 
             const savedOrder = await queryRunner.manager.save(Order, order);
@@ -76,12 +80,21 @@ export class OrderService {
             // Run clearCart without queryRunner.manager to clear cart in Redis
             await this.cartService.clearCart(userId);
 
-            if (dto.paymentMethod === 'COD') {
+            if (dto.payment === PaymentMethod.COD) {
                 // Update status of order with CONFIRMED status
                 const finalOrder = await this.orderRepository.save({
                     id: savedOrder.id,
                     status: OrderStatus.CONFIRMED
                 });
+
+                await this.sendOrderConfirmationEmail(
+                    userId,
+                    finalOrder.id,
+                    totalAmount,
+                    order.shipping_address,
+                    order.payment_method,
+                );
+
                 return { order_id: finalOrder.id, status: finalOrder.status, redirect_url: null };
             }
 
@@ -93,6 +106,39 @@ export class OrderService {
             throw err;
         } finally {
             await queryRunner.release();
+        }
+    }
+    private async sendOrderConfirmationEmail(
+        userId: number,
+        orderId: number,
+        totalAmount: number,
+        shippingAddress: string,
+        paymentMethod: string,
+    ): Promise<void> {
+        try {
+            const user = await this.usersService.findOneById(userId);
+            if (!user || !user.email) {
+                console.log(
+                    `Order ${orderId}: user ${userId} không có email, bỏ qua gửi mail.`,
+                );
+                return;
+            }
+
+            await this.mailService.sendOrderConfirmationEmail(
+                user.email,
+                user.full_name || 'User',
+                {
+                    orderId,
+                    totalAmount,
+                    shippingAddress,
+                    paymentMethod,
+                },
+            );
+        } catch (err) {
+            console.error(
+                `Failed to send order confirmation email for order ${orderId}:`,
+                err,
+            );
         }
     }
 }

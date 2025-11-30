@@ -71,12 +71,13 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @UseGuards(AuthGuard('jwt-refresh'))
     @Post('refresh')
+    @ApiBody({ required: true, schema: { properties: { isRemember: { type: 'boolean', example: true } } } })
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Refresh access token' })
     @ApiOkResponseData(AuthDataResponse)
     @ApiUnauthorized('Invalid or expired refresh token')
-    async refreshTokens(@Request() req: { user: any }): Promise<AuthDataResponse> {
-        return this.authService.refreshTokens(req.user.userId, req.user.refreshToken);
+    async refreshTokens(@Request() req: { user: any }, @Body('isRemember') isRemember: boolean): Promise<AuthDataResponse> {
+        return this.authService.refreshTokens(req.user.userId, req.user.refreshToken, isRemember);
     }
 
     @HttpCode(HttpStatus.OK)

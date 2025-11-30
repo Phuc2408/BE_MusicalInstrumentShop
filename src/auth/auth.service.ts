@@ -184,7 +184,7 @@ export class AuthService {
         };
     }
 
-    async refreshTokens(userId: number, currentRefreshToken: string): Promise<any> {
+    async refreshTokens(userId: number, currentRefreshToken: string, isRemember: boolean): Promise<any> {
         const user = await this.usersService.findOneById(userId);
 
         if (!user || !user.refreshTokenHash) {
@@ -207,7 +207,7 @@ export class AuthService {
 
         if (isMatch) {
             // Khớp -> JTI hợp lệ -> Tạo mới (Rotate)
-            return await this.login(user);
+            return await this.login(user, isRemember);
         } else {
             // Không khớp -> Có thể là token cũ bị dùng lại hoặc token giả
             await this.usersService.updateRefreshTokenHash(userId, null);

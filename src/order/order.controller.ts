@@ -2,26 +2,32 @@ import { Body, Controller, InternalServerErrorException, Logger, Post, Req, UseG
 import { OrderService } from './order.service';
 import { AuthGuard } from '@nestjs/passport';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CreateOrderResponseDto } from './dto/order.response.dto';
+import { ApiUnauthorized } from 'src/common/decorators/swagger.decorator';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('v1/orders')
 export class OrderController {
-
-  private readonly logger = new Logger(OrderController.name);
 
   constructor(private readonly orderService: OrderService) { }
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
-  async create(@Req() req, @Body() createOrderDto: CreateOrderDto) {
+  @ApiOperation({ summary: 'Checkout current cart and create an order' })
+  @ApiUnauthorized('Checkout Failed')
+  async create(@Req() req, @Body() createOrderDto: CreateOrderDto): Promise<CreateOrderResponseDto> {
 
     const userId = req.user.user_id;
     const result = await this.orderService.createOrder(userId, createOrderDto);
-    if (result) {
-      return {
-        orderId: result.order_id,
-        redirectUrl: result.redirect_url
-      };
+    if (!result) {
+      throw new InternalServerErrorException(
+        'Cannot create order, please try again later',
+      );
     }
-    throw new InternalServerErrorException('Không thể tạo đơn hàng. Vui lòng kiểm tra lại giỏ hàng hoặc thử lại sau.');
+    return {
+      order_id: result.order_id,
+      status: result.status,
+      redirect_url: result.redirect_url,
+    };
   }
 }
