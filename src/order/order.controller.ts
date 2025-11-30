@@ -4,15 +4,16 @@ import { AuthGuard } from '@nestjs/passport';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CreateOrderResponseDto } from './dto/order.response.dto';
 import { ApiUnauthorized } from 'src/common/decorators/swagger.decorator';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 @Controller('v1/orders')
+@UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth()
 export class OrderController {
 
   constructor(private readonly orderService: OrderService) { }
 
   @Post()
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Checkout current cart and create an order' })
   @ApiUnauthorized('Checkout Failed')
   async create(@Req() req, @Body() createOrderDto: CreateOrderDto): Promise<CreateOrderResponseDto> {

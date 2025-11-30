@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
@@ -66,10 +66,9 @@ export class CartController {
     }
 
     @Post('sync')
+    @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Synchronize guest cart items with user cart' })
-    @ApiResponse({ status: 200, description: 'Success' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOkResponseData(CartResponseDto)
     async syncCart(
         @Req() req,
         @Body() body: { guest_cart_items: AddToCartDto[] }
