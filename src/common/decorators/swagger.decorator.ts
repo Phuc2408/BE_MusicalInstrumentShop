@@ -12,6 +12,7 @@ import { BaseResponseDto } from '../types/common.type';
  */
 export const ApiOkResponseData = <DataDto extends Type<unknown>>(
     dataDto: DataDto | [DataDto],
+    description: string = 'Successful',
 ) => {
     // 1. Kiểm tra xem đầu vào có phải là mảng không (ví dụ: [BrandResponse])
     const isArray = Array.isArray(dataDto);
@@ -24,6 +25,7 @@ export const ApiOkResponseData = <DataDto extends Type<unknown>>(
         ApiExtraModels(BaseResponseDto, model),
 
         ApiOkResponse({
+            description: description,
             schema: {
                 allOf: [
                     // Kế thừa các trường cơ bản (statusCode, message...) từ BaseResponseDto
@@ -55,6 +57,7 @@ export const ApiOkResponseMessage = (customMessage: string = 'Success') =>
     applyDecorators(
         ApiExtraModels(BaseResponseDto),
         ApiOkResponse({
+            description: customMessage,
             schema: {
                 allOf: [
                     { $ref: getSchemaPath(BaseResponseDto) }, // 1. Lấy khung chuẩn (statusCode, message...)
