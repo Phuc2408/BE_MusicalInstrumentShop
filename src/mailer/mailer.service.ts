@@ -1,200 +1,113 @@
 import { Injectable } from '@nestjs/common';
-import { MailerService as NestMailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 
 @Injectable()
 export class MailerService {
-    constructor(private readonly nestMailerService: NestMailerService) { }
+  private resend: Resend | null = null;
+  private from: string;
 
-    async sendPasswordResetEmail(
+  constructor(private readonly configService: ConfigService) {
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
+    }
+
+    this.from =
+      this.configService.get<string>('EMAIL_FROM') ||
+      'onboarding@resend.dev';
+  }
+
+  private async send(to: string, subject: string, html: string): Promise<void> {
+    if (!this.resend) return;
+
+    const { error } = await this.resend.emails.send({
+      from: this.from,
+      to,
+      subject,
+      html,
+    });
+
+    // Không log lỗi, chỉ silently fail
+    if (error) return;
+  }
+
+  async sendPasswordResetEmail(
     toEmail: string,
     name: string,
     resetLink: string,
-): Promise<void> {
-
+  ): Promise<void> {
     const subject = 'Đặt lại mật khẩu tài khoản của bạn';
 
     const emailHtml = `
     <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px; }
-        .container {
-          max-width: 600px; margin: auto; background: #ffffff; padding: 24px;
-          border-radius: 8px; border: 1px solid #e5e7eb;
-        }
-        h1 { color: #111827; font-size: 22px; margin-bottom: 12px; }
-        p { color: #374151; font-size: 15px; line-height: 1.6; }
-        .btn {
-          display: inline-block; margin-top: 16px; padding: 12px 24px;
-          background-color: #2563eb; color: white !important; text-decoration: none;
-          border-radius: 6px; font-weight: bold; font-size: 15px;
-        }
-        .footer {
-          margin-top: 32px; font-size: 13px; text-align: center; color: #6b7280;
-        }
-      </style>
-    </head>
-
-    <body>
-      <div class="container">
-        <h1>Xin chào, ${name} </h1>
+      <body style="font-family: Arial, sans-serif;">
+        <h1>Xin chào, ${name}</h1>
 
         <p>Bạn đã yêu cầu đặt lại mật khẩu tài khoản của mình.</p>
-        <p>Nhấn vào nút bên dưới để tạo mật khẩu mới:</p>
 
-        <a href="${resetLink}" class="btn">Đặt lại mật khẩu</a>
-
-        <p style="margin-top: 20px;">
-          Liên kết này sẽ <b>hết hạn sau 1 giờ</b>.  
-          Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+        <p>
+          <a href="${resetLink}"
+            style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;
+            text-decoration:none;border-radius:6px;">
+            Đặt lại mật khẩu
+          </a>
         </p>
 
-        <div class="footer">
-          © Solar String – Customer Support
-        </div>
-      </div>
-    </body>
+        <p>Liên kết sẽ hết hạn sau 1 giờ.</p>
+
+        <p style="color:#6b7280">© Solar String – Customer Support</p>
+      </body>
     </html>
     `;
 
-    await this.nestMailerService.sendMail({
-        to: toEmail,
-        from: 'Solar String <noreply@yourapp.com>',
-        subject,
-        html: emailHtml,
-    });
-}
+    return this.send(toEmail, subject, emailHtml);
+  }
 
+  async sendOrderConfirmationEmail(
+    toEmail: string,
+    name: string,
+    payload: {
+      orderId: number;
+      totalAmount: number;
+      shippingAddress: string;
+      paymentMethod: string;
+    },
+  ): Promise<void> {
+    const subject = `Xác nhận đơn hàng #${payload.orderId} – Solar String`;
 
-    async sendOrderConfirmationEmail(
-  toEmail: string,
-  name: string,
-  payload: {
-    orderId: number;
-    totalAmount: number;
-    shippingAddress: string;
-    paymentMethod: string;
-  },
-): Promise<void> {
+    const formattedTotal = new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(payload.totalAmount);
 
-  const subject = `Xác nhận đơn hàng #${payload.orderId} – Solar String`;
+    const paymentLabel =
+      payload.paymentMethod === 'COD'
+        ? 'Thanh toán khi nhận hàng (COD)'
+        : 'Thanh toán Online';
 
-  const formattedTotal = new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(payload.totalAmount);
+    const emailHtml = `
+    <html>
+      <body style="font-family: Arial, sans-serif;">
+        <h1>Xin chào ${name},</h1>
 
-  const paymentLabel =
-    payload.paymentMethod === 'COD'
-      ? 'Thanh toán khi nhận hàng (COD)'
-      : 'Thanh toán Online';
+        <p>Cảm ơn bạn đã đặt hàng tại <b>Solar String</b>.</p>
 
-  const emailHtml = `
-  <html>
-  <head>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-        padding: 24px;
-      }
-      .container {
-        max-width: 650px;
-        margin: auto;
-        background: #ffffff;
-        padding: 32px;
-        border-radius: 12px;
-        border: 1px solid #e5e7eb;
-      }
-      h1 {
-        font-size: 22px;
-        color: #1f2937;
-        margin-bottom: 12px;
-        font-weight: 600;
-      }
-      p {
-        font-size: 15px;
-        color: #374151;
-        line-height: 1.6;
-      }
-      .summary {
-        background: #fafafa;
-        padding: 20px;
-        border-radius: 8px;
-        margin-top: 18px;
-        border: 1px solid #e5e7eb;
-      }
-      .row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 14px;
-        font-size: 15px;
-      }
-      .label {
-        font-weight: 600;
-        color: #374151;
-      }
-      .value {
-        color: #111827;
-      }
-      .footer {
-        margin-top: 28px;
-        text-align: center;
-        font-size: 13px;
-        color: #6b7280;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="container">
-      <h1>Xin chào ${name},</h1>
-
-      <p>
-        Cảm ơn bạn đã đặt hàng tại <b>Solar String</b>.  
-        Dưới đây là thông tin đơn hàng của bạn:
-      </p>
-
-      <div class="summary">
-        <div class="row">
-          <span class="label">Mã đơn hàng: </span>
-          <span class="value">#${payload.orderId}</span>
+        <div style="background:#fafafa;padding:16px;border-radius:8px;">
+          <p><b>Mã đơn hàng:</b> #${payload.orderId}</p>
+          <p><b>Tổng thanh toán:</b> ${formattedTotal}</p>
+          <p><b>Phương thức thanh toán:</b> ${paymentLabel}</p>
+          <p><b>Địa chỉ giao hàng:</b> ${payload.shippingAddress}</p>
         </div>
 
-        <div class="row">
-          <span class="label">Tổng thanh toán: </span>
-          <span class="value">${formattedTotal}</span>
-        </div>
+        <p>Đơn hàng đang được xử lý và sẽ được giao sớm nhất.</p>
 
-        <div class="row">
-          <span class="label">Phương thức thanh toán: </span>
-          <span class="value">${paymentLabel}</span>
-        </div>
+        <p style="color:#6b7280">© Solar String – Trân trọng cảm ơn bạn.</p>
+      </body>
+    </html>
+    `;
 
-        <div class="row" style="align-items:flex-start;">
-          <span class="label">Địa chỉ giao hàng: </span>
-          <span class="value" style="max-width:350px;">${payload.shippingAddress}</span>
-        </div>
-      </div>
-
-      <p style="margin-top:20px;">
-        Đơn hàng đang được xử lý. Chúng tôi sẽ giao hàng trong thời gian sớm nhất.
-        Nếu bạn cần hỗ trợ, hãy phản hồi email này.
-      </p>
-
-      <div class="footer">
-        © Solar String – Trân trọng cảm ơn bạn đã tin tưởng chúng tôi.
-      </div>
-    </div>
-  </body>
-  </html>
-  `;
-
-  await this.nestMailerService.sendMail({
-    to: toEmail,
-    from: 'Solar String <noreply@solarstring.com>',
-    subject,
-    html: emailHtml,
-  });
-}
+    return this.send(toEmail, subject, emailHtml);
+  }
 }
