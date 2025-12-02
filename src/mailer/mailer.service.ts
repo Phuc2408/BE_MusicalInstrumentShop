@@ -20,18 +20,27 @@ export class MailerService {
   }
 
   private async send(to: string, subject: string, html: string): Promise<void> {
-    if (!this.resend) return;
+    if (!this.resend) {
+      // tạm log 1 dòng để biết prod có API KEY hay không
+      console.error('Resend is NOT configured. Missing RESEND_API_KEY?');
+      return;
+    }
 
-    const { error } = await this.resend.emails.send({
+    const { data, error } = await this.resend.emails.send({
       from: this.from,
       to,
       subject,
       html,
     });
 
-    // Không log lỗi, chỉ silently fail
-    if (error) return;
+    if (error) {
+      console.error('Resend error:', error.message);
+      return;
+    }
+
+    console.log('Resend email queued. id =', data?.id);
   }
+
 
   async sendPasswordResetEmail(
     toEmail: string,
