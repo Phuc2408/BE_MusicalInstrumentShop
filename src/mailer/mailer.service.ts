@@ -1,46 +1,40 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import * as SibApiV3Sdk from '@sendinblue/client';
 
 @Injectable()
 export class MailerService {
-  private resend: Resend | null = null;
-  private from: string;
+  private brevo: SibApiV3Sdk.TransactionalEmailsApi;
+  private fromEmail: string;
+  private fromName: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-
-    if (apiKey) {
-      this.resend = new Resend(apiKey);
+    const apiKey = this.configService.get<string>('BREVO_API_KEY');
+    if (!apiKey) {
+      throw new Error('BREVO_API_KEY missing');
     }
 
-    this.from =
-      this.configService.get<string>('EMAIL_FROM') ||
-      'onboarding@resend.dev';
+    this.brevo = new SibApiV3Sdk.TransactionalEmailsApi();
+    this.brevo.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, apiKey);
+
+    this.fromEmail = this.configService.get<string>('BREVO_FROM_EMAIL')!;
+    this.fromName = this.configService.get<string>('BREVO_FROM_NAME')!;
   }
 
   private async send(to: string, subject: string, html: string): Promise<void> {
-    if (!this.resend) {
-      // tạm log 1 dòng để biết prod có API KEY hay không
-      console.error('Resend is NOT configured. Missing RESEND_API_KEY?');
-      return;
+    try {
+      await this.brevo.sendTransacEmail({
+        sender: { email: this.fromEmail, name: this.fromName },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html,
+      });
+
+      console.log(`Brevo email sent → ${to}`);
+    } catch (error) {
+      console.error('Brevo send error:', error?.response?.body || error);
     }
-
-    const { data, error } = await this.resend.emails.send({
-      from: this.from,
-      to,
-      subject,
-      html,
-    });
-
-    if (error) {
-      console.error('Resend error:', error.message);
-      return;
-    }
-
-    console.log('Resend email queued. id =', data?.id);
   }
-
 
   async sendPasswordResetEmail(
     toEmail: string,
@@ -50,25 +44,16 @@ export class MailerService {
     const subject = 'Đặt lại mật khẩu tài khoản của bạn';
 
     const emailHtml = `
-    <html>
-      <body style="font-family: Arial, sans-serif;">
-        <h1>Xin chào, ${name}</h1>
+      <h2>Xin chào, ${name}</h2>
+      <p>Bạn đã yêu cầu đặt lại mật khẩu.</p>
 
-        <p>Bạn đã yêu cầu đặt lại mật khẩu tài khoản của mình.</p>
+      <a href="${resetLink}"
+         style="padding:10px 20px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;">
+         Đặt lại mật khẩu
+      </a>
 
-        <p>
-          <a href="${resetLink}"
-            style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;
-            text-decoration:none;border-radius:6px;">
-            Đặt lại mật khẩu
-          </a>
-        </p>
-
-        <p>Liên kết sẽ hết hạn sau 1 giờ.</p>
-
-        <p style="color:#6b7280">© Solar String – Customer Support</p>
-      </body>
-    </html>
+      <p>Liên kết hết hạn sau 1 giờ.</p>
+      <p>© Solar String – Customer Support</p>
     `;
 
     return this.send(toEmail, subject, emailHtml);
@@ -86,7 +71,7 @@ export class MailerService {
   ): Promise<void> {
     const subject = `Xác nhận đơn hàng #${payload.orderId} – Solar String`;
 
-    const formattedTotal = new Intl.NumberFormat('vi-VN', {
+    const total = new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
     }).format(payload.totalAmount);
@@ -96,27 +81,19 @@ export class MailerService {
         ? 'Thanh toán khi nhận hàng (COD)'
         : 'Thanh toán Online';
 
-    const emailHtml = `
-    <html>
-      <body style="font-family: Arial, sans-serif;">
-        <h1>Xin chào ${name},</h1>
+    const html = `
+      <h2>Xin chào, ${name}</h2>
+      <p>Cảm ơn bạn đã đặt hàng tại Solar String.</p>
 
-        <p>Cảm ơn bạn đã đặt hàng tại <b>Solar String</b>.</p>
+      <p><b>Mã đơn hàng:</b> #${payload.orderId}</p>
+      <p><b>Tổng thanh toán:</b> ${total}</p>
+      <p><b>Thanh toán:</b> ${paymentLabel}</p>
+      <p><b>Địa chỉ giao hàng:</b> ${payload.shippingAddress}</p>
 
-        <div style="background:#fafafa;padding:16px;border-radius:8px;">
-          <p><b>Mã đơn hàng:</b> #${payload.orderId}</p>
-          <p><b>Tổng thanh toán:</b> ${formattedTotal}</p>
-          <p><b>Phương thức thanh toán:</b> ${paymentLabel}</p>
-          <p><b>Địa chỉ giao hàng:</b> ${payload.shippingAddress}</p>
-        </div>
-
-        <p>Đơn hàng đang được xử lý và sẽ được giao sớm nhất.</p>
-
-        <p style="color:#6b7280">© Solar String – Trân trọng cảm ơn bạn.</p>
-      </body>
-    </html>
+      <p>Chúng tôi sẽ sớm giao hàng cho bạn.</p>
+      <p>© Solar String – Trân trọng cảm ơn.</p>
     `;
 
-    return this.send(toEmail, subject, emailHtml);
+    return this.send(toEmail, subject, html);
   }
 }
