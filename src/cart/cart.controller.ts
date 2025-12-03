@@ -2,9 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post
 import { CartService } from './cart.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AddToCartDto, UpdateCartItemDto } from './dto/cart.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { CartResponseDto } from './dto/cart.response.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApiBadRequest, ApiCreatedResponseData, ApiNotFound, ApiOkResponseData, ApiUnauthorized } from 'src/common/decorators/swagger.decorator';
+import { CartDataWrapperDto } from './dto/cart.response.dto';
 
 @ApiTags('Cart')
 @ApiBearerAuth()
@@ -15,27 +15,27 @@ export class CartController {
 
     @Get()
     @ApiOperation({ summary: 'Retrieve the user cart' })
-    @ApiOkResponseData(CartResponseDto)
+    @ApiOkResponseData(CartDataWrapperDto)
     @ApiUnauthorized()
-    getCart(@Req() req) {
+    getCart(@Req() req): Promise<CartDataWrapperDto> {
         const userId = req.user.user_id;
         return this.cartService.getCart(userId);
     }
 
     @Post('items')
     @ApiOperation({ summary: 'Add an item to the cart' })
-    @ApiCreatedResponseData(CartResponseDto)
+    @ApiCreatedResponseData(CartDataWrapperDto)
     @ApiBadRequest('Invalid product or insufficient stock')
     @ApiUnauthorized()
     @ApiNotFound('Product not exist')
-    addToCart(@Req() req, @Body() dto: AddToCartDto) {
+    addToCart(@Req() req, @Body() dto: AddToCartDto): Promise<CartDataWrapperDto> {
         const userId = req.user.user_id;
         return this.cartService.addToCart(userId, dto);
     }
 
     @Patch('items/:productId')
     @ApiOperation({ summary: 'Update the quantity of an item in the cart' })
-    @ApiOkResponseData(CartResponseDto)
+    @ApiOkResponseData(CartDataWrapperDto)
     @ApiBadRequest()
     @ApiUnauthorized()
     @ApiNotFound('Cart not found | Item not found')
@@ -43,24 +43,24 @@ export class CartController {
         @Req() req,
         @Param('productId') productId: number,
         @Body() dto: UpdateCartItemDto
-    ) {
+    ): Promise<CartDataWrapperDto> {
         return this.cartService.updateQuantity(req.user.user_id, +productId, dto);
     }
 
     @Delete('items/:productId')
     @ApiOperation({ summary: 'Remove an item from the cart' })
-    @ApiOkResponseData(CartResponseDto)
+    @ApiOkResponseData(CartDataWrapperDto)
     @ApiUnauthorized()
-    removeFromCart(@Req() req, @Param('productId') productId: number) {
+    removeFromCart(@Req() req, @Param('productId') productId: number): Promise<CartDataWrapperDto> {
         const userId = req.user.user_id;
         return this.cartService.removeFromCart(userId, +productId);
     }
 
     @Delete()
     @ApiOperation({ summary: 'Clear the entire cart' })
-    @ApiOkResponseData(CartResponseDto)
+    @ApiOkResponseData(CartDataWrapperDto)
     @ApiUnauthorized()
-    clearCart(@Req() req) {
+    clearCart(@Req() req): Promise<CartDataWrapperDto> {
         const userId = req.user.user_id;
         return this.cartService.clearCart(userId);
     }
@@ -68,11 +68,11 @@ export class CartController {
     @Post('sync')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Synchronize guest cart items with user cart' })
-    @ApiOkResponseData(CartResponseDto)
+    @ApiOkResponseData(CartDataWrapperDto)
     async syncCart(
         @Req() req,
         @Body() body: { guest_cart_items: AddToCartDto[] }
-    ) {
+    ): Promise<CartDataWrapperDto> {
         const userId = req.user.user_id;
         const items = body.guest_cart_items;
 

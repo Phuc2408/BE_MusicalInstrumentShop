@@ -1,5 +1,19 @@
 import { ApiProperty } from "@nestjs/swagger";
 
+export class MainImageDto {
+    @ApiProperty({ example: 573 })
+    id: number;
+
+    @ApiProperty({ example: "https://example.com/image.jpg" })
+    image_url: string;
+
+    @ApiProperty({ example: true })
+    is_main: boolean;
+
+    @ApiProperty({ example: "2025-11-23T10:36:16.082Z" })
+    created_at: string;
+}
+
 export class ProductInCartDto {
     @ApiProperty({ example: 123 })
     id: number;
@@ -19,11 +33,8 @@ export class ProductInCartDto {
     @ApiProperty({ example: 10 })
     stock_quantity: number;
 
-    @ApiProperty({
-        example: { url: "https://example.com/image.jpg", is_main: true },
-        nullable: true
-    })
-    main_image: any;
+    @ApiProperty({ type: MainImageDto })
+    main_image: MainImageDto | null;
 }
 
 export class CartItemResponseDto {
@@ -37,10 +48,20 @@ export class CartItemResponseDto {
     product: ProductInCartDto;
 }
 
-export class CartResponseDto {
-    @ApiProperty({
-        type: [CartItemResponseDto],
-        description: "List of items in the cart"
-    })
+export class CartInnerDataDto {
+    @ApiProperty({ type: [CartItemResponseDto] })
     cart_items: CartItemResponseDto[];
 }
+
+export class CartDataWrapperDto {
+    @ApiProperty({ type: CartInnerDataDto })
+    data: CartInnerDataDto;
+}
+
+// export class CartResponseDto {
+//     @ApiProperty({
+//         type: [CartItemResponseDto],
+//         description: "List of items in the cart"
+//     })
+//     cart_items: CartItemResponseDto[];
+// }

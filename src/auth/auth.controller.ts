@@ -47,7 +47,7 @@ export class AuthController {
     @ApiOkResponseData(AuthDataResponse)
     @ApiBadRequest(['email must be an email', 'password should not be empty'])
     @ApiUnauthorized('Wrong email or password')
-    async loginLocal(@Request() req: { user: User }, @Body() loginDto: LoginUserDto): Promise<AuthDataResponse> {
+    async loginLocal(@Body() loginDto: LoginUserDto): Promise<AuthDataResponse> {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
 
         if (!user) {

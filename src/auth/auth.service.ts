@@ -185,6 +185,7 @@ export class AuthService {
     }
 
     async refreshTokens(userId: number, currentRefreshToken: string, isRemember: boolean): Promise<any> {
+        // Lấy user từ DB
         const user = await this.usersService.findOneById(userId);
 
         if (!user || !user.refreshTokenHash) {
