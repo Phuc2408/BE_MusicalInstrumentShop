@@ -2,7 +2,7 @@ import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-vali
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LoginUserDto {
-  @ApiProperty({ example: 'jane.doe@example.com', description: "The user's email address" })
+  @ApiProperty({ example: 'email@test.com', description: "The user's email address" })
   @IsEmail({}, { message: 'Invalid email format' })
   @IsNotEmpty({ message: 'Email should not be empty' })
   email: string;

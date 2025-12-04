@@ -177,7 +177,7 @@ export class ProductService {
     })
 
     if (!productDetail) {
-      throw new NotFoundException(`Product with slug "${slug}" not found.`);
+      throw new NotFoundException(`Product not found`);
     }
     return productDetail;
   }

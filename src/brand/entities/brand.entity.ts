@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Product } from '../../product/entities/product.entity';
 
 @Entity('brands')
-export class Brand{
+export class Brand {
     @PrimaryGeneratedColumn()
     id: number;
 
@@ -14,13 +14,13 @@ export class Brand{
 
     @Column({ type: 'text', nullable: true })
     description: string;
-    
+
     @CreateDateColumn({ type: 'timestamp without time zone' })
     created_at: Date;
 
     @UpdateDateColumn({ type: 'timestamp without time zone' })
     updated_at: Date;
-    
+
     @OneToMany(() => Product, product => product.brand)
     products: Product[];
 }

@@ -19,21 +19,25 @@ export class RtStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
         } as any);
     }
 
-    async validate(req: Request, payload: any){
+    async validate(req: Request, payload: any) {
         const refreshToken = req.get('Authorization')?.replace('Bearer', '').trim();
         if (!refreshToken) {
-        throw new UnauthorizedException('Refresh token not found in body.');
+            throw new UnauthorizedException('Refresh token not found in body.');
         }
-        const user = await this.usersService.findOneById(payload.sub); 
+        const user = await this.usersService.findOneById(payload.sub);
 
         if (!user || !user.refreshTokenHash) {
             throw new UnauthorizedException('Access Denied. Token revoked or User not found.');
         }
-        
-        return { 
-        userId: payload.sub, 
-        email: payload.email, 
-        refreshToken 
-    };
+
+        if (!payload.jti) {
+            throw new UnauthorizedException('Not a refresh token');
+        }
+
+        return {
+            userId: payload.sub,
+            email: payload.email,
+            refreshToken
+        };
     }
 }

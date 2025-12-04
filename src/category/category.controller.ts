@@ -1,8 +1,8 @@
 import { Controller, Get } from "@nestjs/common";
 import { CategoryService } from "./category.service";
-import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Category } from "./entities/category.entity";
-
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiOkResponseData } from "src/common/decorators/swagger.decorator";
+import { CategoryResponseDTO } from "./dto/category.response.dto";
 @ApiTags('Category')
 @Controller('v1/categories')
 export class CategoryController {
@@ -10,20 +10,9 @@ export class CategoryController {
 
     @Get()
     @ApiOperation({ summary: 'Retrieve a list of all categories' })
-    @ApiResponse({
-        status: 200,
-        description: 'List of all categories',
-        type: [Category],
-    })
-    @ApiResponse({
-        status: 400,
-        description: 'Bad request - invalid query or parameters',
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'Unauthorized - missing or invalid authentication',
-    })
-    async getAllCategories(): Promise<Category[]> {
+    @ApiOkResponseData([CategoryResponseDTO])
+
+    async getAllCategories(): Promise<CategoryResponseDTO[]> {
         return this.categoryService.findAllCategories();
     }
 }

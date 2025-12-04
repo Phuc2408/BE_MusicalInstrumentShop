@@ -1,7 +1,8 @@
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { Brand } from "./entities/brand.entity";
 import { Controller, Get } from "@nestjs/common";
 import { BrandService } from "./brand.service";
+import { ApiOkResponseData } from "src/common/decorators/swagger.decorator";
+import { BrandResponseDTO } from "./dto/getAllBrandRes.dto";
 
 @ApiTags('Brand')
 @Controller('v1/brands')
@@ -10,20 +11,9 @@ export class BrandController {
 
     @Get()
     @ApiOperation({ summary: 'Retrieve a list of all brands' })
-    @ApiResponse({
-        status: 200,
-        description: 'Success - list of brands returned',
-        type: [Brand],
-    })
-    @ApiResponse({
-        status: 400,
-        description: 'Bad Request - invalid request parameters',
-    })
-    @ApiResponse({
-        status: 401,
-        description: 'Unauthorized - authentication required or failed',
-    })
-    async getAllBrands(): Promise<Brand[]> {
+    @ApiOkResponseData([BrandResponseDTO])
+
+    async getAllBrands(): Promise<BrandResponseDTO[]> {
         return this.brandService.findAll();
     }
 }

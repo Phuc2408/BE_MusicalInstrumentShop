@@ -1,31 +1,10 @@
 import { Module } from '@nestjs/common';
-import { MailerModule as NestMailerModule } from '@nestjs-modules/mailer';
+import { ConfigModule } from '@nestjs/config';
 import { MailerService } from './mailer.service';
-import { ConfigService, ConfigModule } from '@nestjs/config';
 
 @Module({
-    imports: [
-        ConfigModule, 
-        NestMailerModule.forRootAsync({
-            imports: [ConfigModule],
-            useFactory: (configService: ConfigService) => ({
-                transport: {
-                    host: configService.get('SMTP_HOST'), 
-                    port: configService.get('SMTP_PORT'), 
-                    secure: configService.get('SMTP_PORT') === 465, 
-                    auth: {
-                        user: configService.get('SMTP_USER'),
-                        pass: configService.get('SMTP_PASS'), 
-                    },
-                },
-                defaults: {
-                    from: `"Musical Instrument Shop" <${configService.get('SMTP_USER')}>`, 
-                },
-            }),
-            inject: [ConfigService],
-        }),
-    ],
+    imports: [ConfigModule],
     providers: [MailerService],
-    exports: [MailerService], 
+    exports: [MailerService],
 })
-export class MailerModule {}
+export class MailerModule { }

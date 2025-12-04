@@ -45,9 +45,14 @@ export class CartService {
                     product_name: prod.product_name,
                     slug: prod.slug,
                     price_display: displayPrice,
-                    price_numeric: prod.price_numeric,
+                    price_numeric: Number(prod.price_numeric),
                     stock_quantity: prod.stock_quantity,
-                    main_image: mainImage,
+                    main_image: mainImage
+                        ? {
+                            ...mainImage,
+                            created_at: mainImage.created_at.toISOString(),  // 👈 FIX
+                        }
+                        : null,
                 },
             }
         })
@@ -70,7 +75,7 @@ export class CartService {
     async getCart(userId: number) {
         const key = this.getRedisKey(userId);
 
-        // B1: Đọc từ Redis (Tốc độ mili-giây)
+        // Đọc từ Redis (Tốc độ mili-giây)
         const cachedCart = await this.redis.get(key);
 
         if (cachedCart) {
@@ -90,11 +95,10 @@ export class CartService {
             }
         }
 
-        // B2: Cache Miss (Hoặc vừa xóa Cache lỗi): Đọc từ Neon (Source of Truth)
-        // console.log(`Cache miss cho user ${userId}, đang đọc từ Database...`);
+        // Cache Miss (Hoặc vừa xóa Cache lỗi): Đọc từ Neon (Source of Truth)
         const cartItems = await this.getCartFromDb(userId);
 
-        // B3: "Châm" lại vào Redis (Lưu 1 giờ)
+        // "Châm" lại vào Redis (Lưu 1 giờ)
         // Chỉ lưu nếu có dữ liệu để tránh cache rác
         if (cartItems.length > 0) {
             await this.redis.set(key, JSON.stringify(cartItems), 'EX', 3600);
@@ -169,7 +173,7 @@ export class CartService {
     }
 
     // Function clear cart cho non transaction và cả transaction cho thanh toán
-    async clearCart(userId: number, entityManager?: EntityManager): Promise<void | { data: any }> {
+    async clearCart(userId: number, entityManager?: EntityManager) {
 
         if (entityManager) {
 
@@ -181,6 +185,8 @@ export class CartService {
 
                 await entityManager.delete(Cart, { userId });
             }
+
+            return { data: { cart_items: [] } };
 
         } else {
 
