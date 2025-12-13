@@ -85,4 +85,12 @@ export class ProductController {
     const product = await this.productService.findProductDetailBySlug(slug);
     return product as unknown as ProductDetailResponse;
   }
+
+  @Get("best-selling/:slug")
+  async topBestSellingByCategory(
+    @Param("slug") categorySlug: string,
+    @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.productService.getTopBestSellingByCategorySlug(categorySlug, Math.min(limit, 50));
+  }
 }

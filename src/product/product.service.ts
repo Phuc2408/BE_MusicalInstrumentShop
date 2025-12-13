@@ -182,6 +182,63 @@ export class ProductService {
     return productDetail;
   }
 
+  async getTopBestSellingByCategorySlug(categorySlug: string, limit = 10) {
+    const okStatuses = ["CONFIRMED"]; // đúng case theo DB bạn
+
+    const qb = this.productRepository
+      .createQueryBuilder("p")
+      .innerJoin(
+        "categories",
+        "c",
+        "c.id = p.category_id AND c.slug = :categorySlug",
+        { categorySlug },
+      )
+      .innerJoin("order_items", "oi", "oi.product_id = p.id")
+      .innerJoin(
+        "orders",
+        "o",
+        "o.id = oi.order_id AND o.status IN (:...okStatuses)",
+        { okStatuses },
+      )
+      .leftJoin("product_images", "pi", "pi.product_id = p.id AND pi.is_main = true")
+      .select([
+        "p.id AS id",
+        "p.slug AS slug",
+        "p.product_name AS product_name",
+        "p.price_numeric AS price_numeric",
+        "p.price_display AS price_display",
+        "pi.image_url AS image_url",
+      ])
+      .addSelect("SUM(oi.quantity)", "sold")
+      .groupBy("p.id")
+      .addGroupBy("p.slug")
+      .addGroupBy("p.product_name")
+      .addGroupBy("p.price_numeric")
+      .addGroupBy("p.price_display")
+      .addGroupBy("pi.image_url")
+      .orderBy("sold", "DESC")
+      .limit(limit);
+
+    const rows = await qb.getRawMany<{
+      id: string;
+      slug: string;
+      product_name: string;
+      price_numeric: string;
+      price_display: string;
+      image_url: string | null;
+      sold: string;
+    }>();
+
+    return rows.map((r) => ({
+      id: Number(r.id),
+      slug: r.slug,
+      productName: r.product_name,
+      priceNumeric: Number(r.price_numeric),
+      priceDisplay: r.price_display,
+      imageUrl: r.image_url,
+      sold: Number(r.sold ?? 0),
+    }));
+  }
 
   create(createProductDto: CreateProductDto) {
     return 'This action adds a new product';
