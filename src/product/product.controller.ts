@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import {
   ApiBadRequest,
@@ -7,7 +7,7 @@ import {
   ApiNotFound,
   ApiOkResponseData
 } from 'src/common/decorators/swagger.decorator';
-import { BrandListResponse, CategoryListResponse, ProductDetailResponse, SearchResponse } from './dto/product.response.dto';
+import { BestSellingResponse, BrandListResponse, CategoryListResponse, ProductDetailResponse, SearchResponse } from './dto/product.response.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { SearchDto } from './dto/searchInput.dto';
 
@@ -86,11 +86,35 @@ export class ProductController {
     return product as unknown as ProductDetailResponse;
   }
 
-  @Get("best-selling/:slug")
+  @Get('best-selling/:slug')
+  @ApiOperation({
+    summary: 'Get top best-selling products by Category Slug',
+    description:
+      'Returns a list of top best-selling products within a given category.',
+  })
+  @ApiParam({
+    name: 'slug',
+    required: true,
+    description: 'Category slug (e.g., acoustic-guitars, electric-guitars)',
+    example: 'acoustic-guitars',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of products returned (default 10, max 50)',
+    example: 10,
+  })
+  @ApiOkResponseData(BestSellingResponse)
+  @ApiBadRequest('Invalid limit value')
+  @ApiNotFound('Category not found')
+  @ApiInternalServerError()
   async topBestSellingByCategory(
-    @Param("slug") categorySlug: string,
-    @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
-    return this.productService.getTopBestSellingByCategorySlug(categorySlug, Math.min(limit, 50));
+    @Param('slug') categorySlug: string,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ): Promise<BestSellingResponse> {
+    return this.productService.getTopBestSellingByCategorySlug(
+      categorySlug,
+      Math.min(limit, 50),
+    ) as unknown as BestSellingResponse;
   }
 }

@@ -157,3 +157,44 @@ export class SearchResponse {
     @ApiProperty({ type: () => [ProductListItemResponse] })
     products: ProductListItemResponse[];
 }
+
+export class BestSellingProductItem {
+    @ApiProperty({ example: 220 })
+    id: number;
+
+    @ApiProperty({
+        example: 'harmony-foundation-series-e-terra-st-petite-om-acoustic-guitar-w-bag-natural-satin',
+    })
+    slug: string;
+
+    @ApiProperty({
+        example: 'Harmony Foundation Series e-Terra ST Petite OM Acoustic Guitar w/Bag, Natural Satin',
+    })
+    productName: string;
+
+    @ApiProperty({ example: 5700000 })
+    priceNumeric: number;
+
+    @ApiProperty({ example: '5.700.000₫' })
+    priceDisplay: string;
+
+    @ApiProperty({
+        example:
+            'https://www.sweelee.com.vn/cdn/shop/files/products_2FHMN-0141047119.jpg',
+    })
+    imageUrl: string;
+
+    @ApiProperty({ example: 2 })
+    sold: number;
+}
+
+export class BestSellingResponse {
+    @ApiProperty({ example: 200 })
+    statusCode: number;
+
+    @ApiProperty({ example: 'Success' })
+    message: string;
+
+    @ApiProperty({ type: [BestSellingProductItem] })
+    data: BestSellingProductItem[];
+}
